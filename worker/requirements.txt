@@ -9,3 +9,5 @@ faster-whisper==1.0.3
 requests==2.32.3
 youtube-transcript-api==0.6.3
 yt-dlp==2025.2.19
+sentence-transformers==3.4.1
+keybert==0.8.5
