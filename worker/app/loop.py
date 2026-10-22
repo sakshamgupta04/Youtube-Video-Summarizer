@@ -1,6 +1,9 @@
 """Worker loop module – polls Supabase items table for queued jobs and executes them.
 
-Supports Phase 2 (TEXT: .txt, .md, .srt, .vtt) and Phase 3 (AUDIO / VIDEO: mp3, wav, mp4, etc. via Whisper).
+Supports:
+- Phase 2: TEXT (.txt, .md, .srt, .vtt)
+- Phase 3: AUDIO / VIDEO (uploads via Whisper)
+- Phase 4: YOUTUBE (captions first -> yt-dlp + Whisper -> friendly error fallback)
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from typing import Any
 from app.config import settings
 from app.db import get_db
 from app.ingest.files import parse_file
+from app.ingest.youtube import process_youtube_video, extract_video_id
 from app.pipeline.transcribe import transcribe_media
 
 logging.basicConfig(
@@ -110,21 +114,15 @@ def _load_text_content(item: dict[str, Any], db: Any) -> tuple[str, str]:
 
 
 def _download_media_to_temp(item: dict[str, Any], db: Any) -> tuple[str, str | None]:
-    """Download audio/video from storage or locate it on disk.
-
-    Returns:
-        (local_file_path, directory_to_cleanup_or_None)
-    """
+    """Download audio/video from storage or locate it on disk."""
     storage_path = item.get("storage_path")
     source_url = item.get("source_url")
 
-    # Local path check
     if storage_path and os.path.exists(storage_path):
         return storage_path, None
     if source_url and os.path.exists(source_url):
         return source_url, None
 
-    # Supabase storage download
     if storage_path:
         logger.info(f"Downloading '{storage_path}' from bucket 'uploads'...")
         try:
@@ -145,10 +143,7 @@ def _download_media_to_temp(item: dict[str, Any], db: Any) -> tuple[str, str | N
 
 
 def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
-    """Process a claimed item through the pipeline.
-
-    Supports 'text', 'audio', and 'video' source types.
-    """
+    """Process a claimed item through the pipeline."""
     if db is None:
         db = get_db()
 
@@ -158,6 +153,7 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
     logger.info(f"Processing item {item_id} [type: {source_type}]")
 
     try:
+        # 1. TEXT path
         if source_type == "text":
             content, filename = _load_text_content(item, db)
             segments, has_timestamps = parse_file(content, filename)
@@ -179,11 +175,11 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
             logger.info(f"Text item {item_id} successfully processed and marked done.")
             return res.data[0] if res.data else update_payload
 
+        # 2. AUDIO / VIDEO path
         elif source_type in ("audio", "video"):
             local_media_path, temp_cleanup_dir = _download_media_to_temp(item, db)
 
             try:
-                # Update status to transcribing
                 db.table("items").update(
                     {"status": "transcribing", "progress": 15}
                 ).eq("id", item_id).execute()
@@ -218,9 +214,70 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
                 if temp_cleanup_dir and os.path.exists(temp_cleanup_dir):
                     shutil.rmtree(temp_cleanup_dir, ignore_errors=True)
 
+        # 3. YOUTUBE path
+        elif source_type == "youtube":
+            video_url = item.get("source_url") or ""
+            video_id = item.get("video_id") or extract_video_id(video_url)
+
+            if not video_id:
+                raise ValueError("Could not extract a valid YouTube video ID.")
+
+            # Cache check: if another done item has the same video_id, copy results
+            cached = (
+                db.table("items")
+                .select("*")
+                .eq("video_id", video_id)
+                .eq("status", "done")
+                .neq("id", item_id)
+                .limit(1)
+                .execute()
+            )
+            if cached.data:
+                cached_item = cached.data[0]
+                logger.info(f"Cache hit for video {video_id}! Copying results from {cached_item['id']}.")
+                update_payload = {
+                    "status": "done",
+                    "progress": 100,
+                    "has_timestamps": True,
+                    "duration_sec": cached_item.get("duration_sec"),
+                    "transcript": cached_item.get("transcript"),
+                    "video_id": video_id,
+                    "error": None,
+                }
+                res = db.table("items").update(update_payload).eq("id", item_id).execute()
+                return res.data[0] if res.data else update_payload
+
+            def on_yt_progress(pct: int) -> None:
+                try:
+                    db.table("items").update({"progress": pct}).eq("id", item_id).execute()
+                except Exception as e:
+                    logger.warning(f"Could not update progress for {item_id}: {e}")
+
+            extracted_id, segments, duration_sec, detected_title = process_youtube_video(
+                video_url or video_id,
+                progress_callback=on_yt_progress,
+            )
+
+            update_payload = {
+                "status": "done",
+                "progress": 100,
+                "has_timestamps": True,
+                "duration_sec": duration_sec,
+                "transcript": segments,
+                "video_id": extracted_id,
+                "error": None,
+            }
+            # Update title if not custom
+            if detected_title and (not item.get("title") or item["title"] == "YouTube Video"):
+                update_payload["title"] = detected_title
+
+            res = db.table("items").update(update_payload).eq("id", item_id).execute()
+            logger.info(f"YouTube item {item_id} ({extracted_id}) successfully processed and marked done.")
+            return res.data[0] if res.data else update_payload
+
         else:
             raise NotImplementedError(
-                f"Source type '{source_type}' is not yet supported in Phase 3."
+                f"Source type '{source_type}' is not supported."
             )
 
     except Exception as exc:

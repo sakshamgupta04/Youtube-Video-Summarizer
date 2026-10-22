@@ -12,15 +12,35 @@ interface AddClientProps {
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
+export function extractYouTubeVideoId(url: string): string | null {
+  const trimmed = url.trim();
+  // Check if raw 11-char ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const match = trimmed.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([a-zA-Z0-9_-]{11})/
+  );
+  return match ? match[1] : null;
+}
+
 export default function AddItemClient({ userId, userEmail }: AddClientProps) {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<"upload" | "link">("upload");
+
+  // Upload tab state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
+  const [uploadTitle, setUploadTitle] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // Link tab state
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [linkTitle, setLinkTitle] = useState("");
+  const [submittingLink, setSubmittingLink] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -35,7 +55,7 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     if (["mp4", "mov", "webm", "mkv", "avi"].includes(ext)) {
       return "video";
     }
-    return "audio"; // fallback
+    return "audio";
   }
 
   function handleFileSelection(file: File) {
@@ -45,8 +65,8 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
       return;
     }
     setSelectedFile(file);
-    if (!title) {
-      setTitle(file.name.replace(/\.[^/.]+$/, ""));
+    if (!uploadTitle) {
+      setUploadTitle(file.name.replace(/\.[^/.]+$/, ""));
     }
   }
 
@@ -61,13 +81,11 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     setErrorMessage(null);
 
     try {
-      const fileExt = selectedFile.name.split(".").pop() || "bin";
       const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const storagePath = `${userId}/${Date.now()}_${sanitizedName}`;
       const sourceType = getSourceType(selectedFile.name);
 
-      // 1. Upload to Supabase Storage "uploads" bucket
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("uploads")
         .upload(storagePath, selectedFile, {
           cacheControl: "3600",
@@ -78,8 +96,7 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // 2. Insert row into items table
-      const itemTitle = title.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
+      const itemTitle = uploadTitle.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
       const { error: insertError } = await supabase.from("items").insert({
         user_id: userId,
         source_type: sourceType,
@@ -98,6 +115,44 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected error occurred during upload.");
       setUploading(false);
+    }
+  }
+
+  async function handleLinkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const videoId = extractYouTubeVideoId(youtubeUrl);
+    if (!videoId) {
+      setErrorMessage(
+        "Invalid YouTube URL. Please enter a valid link (e.g., https://www.youtube.com/watch?v=... or https://youtu.be/...)."
+      );
+      return;
+    }
+
+    setSubmittingLink(true);
+
+    try {
+      const itemTitle = linkTitle.trim() || `YouTube Video (${videoId})`;
+      const { error: insertError } = await supabase.from("items").insert({
+        user_id: userId,
+        source_type: "youtube",
+        source_url: youtubeUrl.trim(),
+        video_id: videoId,
+        title: itemTitle,
+        status: "queued",
+        progress: 0,
+      });
+
+      if (insertError) {
+        throw new Error(`Failed to submit link: ${insertError.message}`);
+      }
+
+      router.push("/library");
+      router.refresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred.");
+      setSubmittingLink(false);
     }
   }
 
@@ -147,7 +202,7 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold tracking-tight mb-2">Add New Content</h1>
             <p className="text-sm text-[var(--text-secondary)]">
-              Upload an audio, video, or transcript file to process with open-source AI
+              Upload a file or paste a YouTube link to transcribe and summarize
             </p>
           </div>
 
@@ -156,7 +211,10 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
             <div className="flex rounded-xl bg-[var(--bg-primary)] p-1 mb-6">
               <button
                 type="button"
-                onClick={() => setActiveTab("upload")}
+                onClick={() => {
+                  setActiveTab("upload");
+                  setErrorMessage(null);
+                }}
                 className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
                   activeTab === "upload"
                     ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
@@ -173,18 +231,21 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
 
               <button
                 type="button"
-                disabled
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium text-[var(--text-muted)] opacity-50 cursor-not-allowed"
-                title="YouTube link support coming in Phase 4"
+                onClick={() => {
+                  setActiveTab("link");
+                  setErrorMessage(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
+                  activeTab === "link"
+                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                }`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
                 YouTube Link
-                <span className="text-[10px] uppercase tracking-wider bg-[var(--bg-primary)] px-1.5 py-0.5 rounded text-[var(--text-muted)] border border-[var(--border-subtle)]">
-                  Soon
-                </span>
               </button>
             </div>
 
@@ -198,7 +259,6 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
             {/* Upload Tab Form */}
             {activeTab === "upload" && (
               <form onSubmit={handleUploadSubmit} className="space-y-6">
-                {/* Drag & Drop Zone */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -260,22 +320,20 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                   )}
                 </div>
 
-                {/* Optional Title Field */}
                 <div>
-                  <label htmlFor="title" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                  <label htmlFor="uploadTitle" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
                     Title (optional)
                   </label>
                   <input
-                    id="title"
+                    id="uploadTitle"
                     type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
                     placeholder="e.g. Stanford Lecture on Deep Learning"
                     className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
                   />
                 </div>
 
-                {/* Submit button */}
                 <button
                   type="submit"
                   disabled={uploading || !selectedFile}
@@ -288,6 +346,58 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                     </>
                   ) : (
                     "Upload and Process"
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* YouTube Link Tab Form */}
+            {activeTab === "link" && (
+              <form onSubmit={handleLinkSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="youtubeUrl" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                    YouTube URL
+                  </label>
+                  <input
+                    id="youtubeUrl"
+                    type="url"
+                    required
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Supports regular videos, shorts, and timestamped links (up to 90 min)
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="linkTitle" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                    Custom Title (optional)
+                  </label>
+                  <input
+                    id="linkTitle"
+                    type="text"
+                    value={linkTitle}
+                    onChange={(e) => setLinkTitle(e.target.value)}
+                    placeholder="Auto-detected from video if left blank"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingLink || !youtubeUrl.trim()}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent-glow)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {submittingLink ? (
+                    <>
+                      <span className="spinner" />
+                      Queuing YouTube Video...
+                    </>
+                  ) : (
+                    "Process YouTube Video"
                   )}
                 </button>
               </form>

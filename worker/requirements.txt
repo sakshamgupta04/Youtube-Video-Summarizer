@@ -7,3 +7,5 @@ pydantic==2.9.2
 pydantic-settings==2.5.2
 faster-whisper==1.0.3
 requests==2.32.3
+youtube-transcript-api==0.6.3
+yt-dlp==2025.2.19
