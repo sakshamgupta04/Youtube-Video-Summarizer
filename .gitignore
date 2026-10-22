@@ -1,0 +1,46 @@
+# Environment files (secrets)
+.env
+.env.local
+.env.*
+*.env
+**/.env*
+!**/.env.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+**/.venv/
+**/venv/
+
+# Build output
+.next/
+**/.next/
+out/
+dist/
+
+# Testing & caches
+.pytest_cache/
+**/.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Downloads (never persist raw audio)
+worker/downloads/
+**/downloads/
+*.wav
+*.mp3
+*.mp4
+*.webm
