@@ -1,20 +1,22 @@
 """Worker loop module – polls Supabase items table for queued jobs and executes them.
 
-For Phase 2, handles the TEXT path (.txt, .md, .srt, .vtt) end-to-end:
-queued -> fetching -> done (or failed on error).
+Supports Phase 2 (TEXT: .txt, .md, .srt, .vtt) and Phase 3 (AUDIO / VIDEO: mp3, wav, mp4, etc. via Whisper).
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import time
 from typing import Any
 
 from app.config import settings
 from app.db import get_db
-from app.ingest.files import parse_file, Segment
+from app.ingest.files import parse_file
+from app.pipeline.transcribe import transcribe_media
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,14 +26,10 @@ logger = logging.getLogger("echonotes.worker")
 
 
 def claim_next_item(db: Any = None) -> dict[str, Any] | None:
-    """Atomically find and claim one queued item from the items table.
-
-    Returns the claimed item record or None if no items were claimed.
-    """
+    """Atomically find and claim one queued item from the items table."""
     if db is None:
         db = get_db()
 
-    # Find the oldest queued item
     try:
         response = (
             db.table("items")
@@ -51,14 +49,13 @@ def claim_next_item(db: Any = None) -> dict[str, Any] | None:
     item = response.data[0]
     item_id = item["id"]
 
-    # Atomically claim it: only update if status is still 'queued'
     try:
         claim_res = (
             db.table("items")
             .update(
                 {
                     "status": "fetching",
-                    "progress": 10,
+                    "progress": 5,
                     "error": None,
                 }
             )
@@ -80,22 +77,15 @@ def claim_next_item(db: Any = None) -> dict[str, Any] | None:
 
 
 def _load_text_content(item: dict[str, Any], db: Any) -> tuple[str, str]:
-    """Retrieve raw text content and determine the extension.
-
-    Returns:
-        (raw_text_content, extension_or_filename)
-    """
+    """Retrieve raw text content and determine the extension."""
     storage_path = item.get("storage_path")
     source_url = item.get("source_url")
 
-    # 1. If storage_path is specified
     if storage_path:
-        # Check if it's a local file first (for tests/local dev)
         if os.path.exists(storage_path):
             with open(storage_path, "r", encoding="utf-8", errors="replace") as f:
                 return f.read(), storage_path
 
-        # Otherwise download from Supabase Storage "uploads" bucket
         try:
             res_bytes = db.storage.from_("uploads").download(storage_path)
             content = res_bytes.decode("utf-8", errors="replace")
@@ -105,27 +95,59 @@ def _load_text_content(item: dict[str, Any], db: Any) -> tuple[str, str]:
                 f"Failed to download storage_path '{storage_path}' from bucket 'uploads': {e}"
             ) from e
 
-    # 2. If source_url is specified
     if source_url:
         if os.path.exists(source_url):
             with open(source_url, "r", encoding="utf-8", errors="replace") as f:
                 return f.read(), source_url
-        # If it looks like raw inline text rather than a URL or path
         if "\n" in source_url or len(source_url.split()) > 5:
             return source_url, "txt"
         raise ValueError(f"File or URL '{source_url}' could not be accessed.")
 
-    # 3. Check if title or transcript was provided as fallback
     if item.get("title") and len(item["title"].split()) > 10:
         return item["title"], "txt"
 
     raise ValueError("No storage_path, source_url, or text content provided for this item.")
 
 
+def _download_media_to_temp(item: dict[str, Any], db: Any) -> tuple[str, str | None]:
+    """Download audio/video from storage or locate it on disk.
+
+    Returns:
+        (local_file_path, directory_to_cleanup_or_None)
+    """
+    storage_path = item.get("storage_path")
+    source_url = item.get("source_url")
+
+    # Local path check
+    if storage_path and os.path.exists(storage_path):
+        return storage_path, None
+    if source_url and os.path.exists(source_url):
+        return source_url, None
+
+    # Supabase storage download
+    if storage_path:
+        logger.info(f"Downloading '{storage_path}' from bucket 'uploads'...")
+        try:
+            file_bytes = db.storage.from_("uploads").download(storage_path)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to download '{storage_path}' from Supabase 'uploads' bucket: {e}"
+            ) from e
+
+        temp_dir = tempfile.mkdtemp(prefix="echonotes_dl_")
+        ext = storage_path.split(".")[-1] if "." in storage_path else "media"
+        local_path = os.path.join(temp_dir, f"input.{ext}")
+        with open(local_path, "wb") as f:
+            f.write(file_bytes)
+        return local_path, temp_dir
+
+    raise ValueError("No storage_path or media file provided for audio/video item.")
+
+
 def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
     """Process a claimed item through the pipeline.
 
-    For Phase 2, implements the TEXT path (.txt, .md, .srt, .vtt).
+    Supports 'text', 'audio', and 'video' source types.
     """
     if db is None:
         db = get_db()
@@ -143,11 +165,8 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
             if not segments:
                 raise ValueError("Parsed file contained no text segments.")
 
-            duration_sec = None
-            if has_timestamps and segments:
-                duration_sec = int(segments[-1]["end"])
+            duration_sec = int(segments[-1]["end"]) if has_timestamps and segments else None
 
-            # Save transcript and mark as done
             update_payload = {
                 "status": "done",
                 "progress": 100,
@@ -156,19 +175,52 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
                 "transcript": segments,
                 "error": None,
             }
-
-            res = (
-                db.table("items")
-                .update(update_payload)
-                .eq("id", item_id)
-                .execute()
-            )
-            logger.info(f"Item {item_id} successfully processed and marked done.")
+            res = db.table("items").update(update_payload).eq("id", item_id).execute()
+            logger.info(f"Text item {item_id} successfully processed and marked done.")
             return res.data[0] if res.data else update_payload
+
+        elif source_type in ("audio", "video"):
+            local_media_path, temp_cleanup_dir = _download_media_to_temp(item, db)
+
+            try:
+                # Update status to transcribing
+                db.table("items").update(
+                    {"status": "transcribing", "progress": 15}
+                ).eq("id", item_id).execute()
+
+                def on_progress(pct: int) -> None:
+                    try:
+                        db.table("items").update({"progress": pct}).eq("id", item_id).execute()
+                    except Exception as e:
+                        logger.warning(f"Could not update progress for {item_id}: {e}")
+
+                segments, duration_sec = transcribe_media(
+                    local_media_path,
+                    progress_callback=on_progress,
+                )
+
+                if not segments:
+                    raise ValueError("Whisper detected no speech in this media file.")
+
+                update_payload = {
+                    "status": "done",
+                    "progress": 100,
+                    "has_timestamps": True,
+                    "duration_sec": duration_sec,
+                    "transcript": segments,
+                    "error": None,
+                }
+                res = db.table("items").update(update_payload).eq("id", item_id).execute()
+                logger.info(f"Media item {item_id} successfully transcribed ({duration_sec}s) and marked done.")
+                return res.data[0] if res.data else update_payload
+
+            finally:
+                if temp_cleanup_dir and os.path.exists(temp_cleanup_dir):
+                    shutil.rmtree(temp_cleanup_dir, ignore_errors=True)
 
         else:
             raise NotImplementedError(
-                f"Source type '{source_type}' is not yet supported in Phase 2."
+                f"Source type '{source_type}' is not yet supported in Phase 3."
             )
 
     except Exception as exc:
