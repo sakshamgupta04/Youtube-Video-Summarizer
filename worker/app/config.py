@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     max_duration_sec: int = 5400  # 90 minutes
     max_upload_mb: int = 50
     worker_secret: str = "echonotes-shared-secret-key-384"
+    summarizer_model: str = "sshleifer/distilbart-cnn-12-6"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -60,6 +60,7 @@ def test_process_text_item_inline_content():
     assert update_call_args["progress"] == 100
     assert update_call_args["has_timestamps"] is False
     assert len(update_call_args["transcript"]) == 2
+    assert "summary" in update_call_args
 
 
 def test_process_item_error_marks_failed():

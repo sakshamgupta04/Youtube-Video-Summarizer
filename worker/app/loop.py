@@ -25,6 +25,7 @@ from app.pipeline.chunk import create_chunks
 from app.pipeline.embed import embed_texts
 from app.pipeline.chapters import detect_chapters
 from app.pipeline.keypoints import extract_key_points
+from app.pipeline.summarize import summarize_chapters_and_overall
 
 logging.basicConfig(
     level=logging.INFO,
@@ -190,16 +191,25 @@ def _process_understanding_pipeline(
         logger.info(f"Stored {len(chunk_rows)} embedded chunks in pgvector.")
 
     # 3. Detect chapters
-    db.table("items").update({"progress": 85}).eq("id", item_id).execute()
+    db.table("items").update({"progress": 80}).eq("id", item_id).execute()
     chapters = detect_chapters(segments, has_timestamps=has_timestamps)
     logger.info(f"Generated {len(chapters)} chapters for item {item_id}.")
 
     # 4. Extract key points
-    db.table("items").update({"progress": 95}).eq("id", item_id).execute()
+    db.table("items").update({"progress": 88}).eq("id", item_id).execute()
     key_points = extract_key_points(segments, chapters=chapters)
     logger.info(f"Extracted {len(key_points)} key points for item {item_id}.")
 
-    return chapters, key_points
+    # 5. Summarize (Map-Reduce: chapter summaries + overall summary)
+    db.table("items").update({"progress": 94}).eq("id", item_id).execute()
+    chapters_with_summaries, overall_summary = summarize_chapters_and_overall(
+        segments=segments,
+        chapters=chapters,
+        has_timestamps=has_timestamps,
+    )
+    logger.info(f"Generated summaries for item {item_id} (overall words: {len(overall_summary.split())}).")
+
+    return chapters_with_summaries, key_points, overall_summary
 
 
 def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
@@ -282,6 +292,7 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
                     "transcript": cached_item.get("transcript"),
                     "chapters": cached_item.get("chapters"),
                     "key_points": cached_item.get("key_points"),
+                    "summary": cached_item.get("summary"),
                     "video_id": video_id,
                     "error": None,
                 }
@@ -304,8 +315,8 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
         else:
             raise NotImplementedError(f"Source type '{source_type}' is not supported.")
 
-        # --- Run Phase 5 Understanding (chunks, embeddings, chapters, key points) ---
-        chapters, key_points = _process_understanding_pipeline(
+        # --- Run Phase 5/6 Understanding (chunks, embeddings, chapters, key points, summaries) ---
+        chapters, key_points, overall_summary = _process_understanding_pipeline(
             item_id=item_id,
             user_id=user_id,
             segments=segments,
@@ -321,6 +332,7 @@ def process_item(item: dict[str, Any], db: Any = None) -> dict[str, Any]:
             "transcript": segments,
             "chapters": chapters,
             "key_points": key_points,
+            "summary": overall_summary,
             "error": None,
         }
         if video_id:

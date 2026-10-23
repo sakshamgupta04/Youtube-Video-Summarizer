@@ -1,4 +1,5 @@
-"""FastAPI application – health status and embedding endpoint for the worker."""
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,8 +7,23 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.pipeline.embed import embed_text, embed_texts
+from app.pipeline.summarize import load_summarizer_model
 
-app = FastAPI(title="EchoNotes Worker", version="0.2.0")
+logger = logging.getLogger("echonotes.worker")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Preload models on worker start so they are loaded once and ready for inference."""
+    logger.info("Initializing worker models...")
+    try:
+        load_summarizer_model()
+    except Exception as e:
+        logger.warning(f"Could not preload summarizer model at startup: {e}")
+    yield
+
+
+app = FastAPI(title="EchoNotes Worker", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
