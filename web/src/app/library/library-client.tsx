@@ -26,6 +26,7 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
   const supabase = createClient();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -42,10 +43,10 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
   useEffect(() => {
     fetchItems();
 
-    // Poll every 4s if any item is still queued/fetching/transcribing/analyzing
+    // Poll every 3.5s if any item is still queued/fetching/transcribing/analyzing
     const interval = setInterval(() => {
       fetchItems();
-    }, 4000);
+    }, 3500);
 
     return () => clearInterval(interval);
   }, []);
@@ -56,19 +57,24 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
     router.refresh();
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case "done":
-        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Done</span>;
-      case "failed":
-        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium">Failed</span>;
-      case "transcribing":
-        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium animate-pulse">Transcribing...</span>;
-      case "fetching":
-        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium animate-pulse">Fetching...</span>;
-      case "queued":
-      default:
-        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20 font-medium">Queued</span>;
+  async function handleDelete(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (!confirm("Are you sure you want to delete this item? This will remove its transcript, chapters, and embeddings.")) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      // Optimistic update
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      await supabase.from("items").delete().eq("id", id);
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      fetchItems();
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -82,37 +88,65 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
   return (
     <div className="flex-1 flex flex-col min-h-screen">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)] border border-[var(--border-subtle)]">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[var(--accent)]"
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]/50 backdrop-blur-md sticky top-0 z-20">
+        <div className="flex items-center gap-6">
+          <Link href="/library" className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)] border border-[var(--border-subtle)]">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[var(--accent)]"
+              >
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
+            </div>
+            <span className="text-base font-semibold">
+              Echo<span className="text-[var(--accent)]">Notes</span>
+            </span>
+          </Link>
+
+          {/* Navigation links */}
+          <nav className="hidden sm:flex items-center gap-1 text-xs font-medium">
+            <Link
+              href="/library"
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)] font-semibold"
             >
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" x2="12" y1="19" y2="22" />
-            </svg>
-          </div>
-          <span className="text-base font-semibold">
-            Echo<span className="text-[var(--accent)]">Notes</span>
-          </span>
+              Library
+            </Link>
+            <Link
+              href="/search"
+              className="px-3 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+            >
+              Search
+            </Link>
+          </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-[var(--text-muted)] hidden sm:inline">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--text-muted)] hidden md:inline">
             {userEmail}
           </span>
           <Link
+            href="/search"
+            className="sm:hidden p-2 rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            title="Search"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </Link>
+          <Link
             href="/add"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-xs font-semibold text-white transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-xs font-semibold text-white transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98] shadow-sm"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M12 5v14M5 12h14" />
@@ -121,7 +155,7 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
           </Link>
           <button
             onClick={handleLogout}
-            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
           >
             Sign Out
           </button>
@@ -137,6 +171,16 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
               Summarized lectures, podcasts, and transcripts
             </p>
           </div>
+          <Link
+            href="/search"
+            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition-all"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Search Library
+          </Link>
         </div>
 
         {loading ? (
@@ -165,7 +209,7 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
             </div>
             <h2 className="text-lg font-semibold mb-2">Your library is empty</h2>
             <p className="text-sm text-[var(--text-secondary)] mb-6">
-              Upload an audio/video file or paste a text file to get started with transcription and summaries.
+              Upload an audio/video file, provide a YouTube URL, or paste text to generate summaries and searchable timelines.
             </p>
             <Link
               href="/add"
@@ -179,58 +223,122 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="glass-card p-5 flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--accent)]">
-                    {item.source_type === "audio" ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                      </svg>
-                    ) : item.source_type === "video" ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <polygon points="23 7 16 12 23 17 23 7" />
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                      </svg>
-                    ) : (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate text-[var(--text-primary)]">
-                      {item.title || "Untitled Item"}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
-                      <span className="capitalize">{item.source_type}</span>
-                      {item.duration_sec ? (
-                        <>
-                          <span>&middot;</span>
-                          <span>{formatDuration(item.duration_sec)}</span>
-                        </>
-                      ) : null}
-                      <span>&middot;</span>
-                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
-                    </div>
-                    {item.error && (
-                      <p className="text-xs text-[var(--error)] mt-1 truncate">
-                        Error: {item.error}
-                      </p>
-                    )}
-                  </div>
-                </div>
+            {items.map((item) => {
+              const isDone = item.status === "done";
+              const isFailed = item.status === "failed";
+              const isInProgress = !isDone && !isFailed;
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {getStatusBadge(item.status)}
+              const content = (
+                <div className="flex items-center justify-between gap-4 p-5">
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--accent)]">
+                      {item.source_type === "audio" ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        </svg>
+                      ) : item.source_type === "video" || item.source_type === "youtube" ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <polygon points="23 7 16 12 23 17 23 7" />
+                          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                        </svg>
+                      ) : (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-semibold truncate ${isDone ? "text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors" : "text-[var(--text-primary)]"}`}>
+                        {item.title || "Untitled Item"}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
+                        <span className="capitalize">{item.source_type}</span>
+                        {item.duration_sec ? (
+                          <>
+                            <span>&middot;</span>
+                            <span>{formatDuration(item.duration_sec)}</span>
+                          </>
+                        ) : null}
+                        <span>&middot;</span>
+                        <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                      </div>
+
+                      {/* Progress bar for in-progress status */}
+                      {isInProgress && (
+                        <div className="mt-3 max-w-xs">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="capitalize text-[var(--accent)] font-medium">
+                              {item.status}...
+                            </span>
+                            <span className="text-[var(--text-muted)] font-mono">
+                              {item.progress || 10}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[var(--bg-primary)] overflow-hidden border border-[var(--border-subtle)]">
+                            <div
+                              className="h-full bg-gradient-to-r from-[var(--accent)] to-indigo-500 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.max(item.progress || 10, 5)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {isFailed && item.error && (
+                        <p className="text-xs text-[var(--error)] mt-1 truncate">
+                          {item.error}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {isDone ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                        Done
+                      </span>
+                    ) : isFailed ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium">
+                        Failed
+                      </span>
+                    ) : null}
+
+                    {/* Delete action */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(e, item.id)}
+                      disabled={deletingId === item.id}
+                      className="p-2 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                      title="Delete item"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+
+              return (
+                <div
+                  key={item.id}
+                  className={`glass-card transition-all rounded-xl border border-[var(--border-subtle)] ${
+                    isDone
+                      ? "hover:border-[var(--accent)] hover:shadow-lg cursor-pointer group"
+                      : ""
+                  }`}
+                >
+                  {isDone ? (
+                    <Link href={`/item/${item.id}`} className="block">
+                      {content}
+                    </Link>
+                  ) : (
+                    <div>{content}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

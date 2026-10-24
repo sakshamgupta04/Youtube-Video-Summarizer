@@ -65,8 +65,9 @@ async function handleSearch(query: string, itemId: string | null, limit: number)
         );
 
         if (!rpcError && rpcData) {
+          const enriched = await enrichResultsWithItems(supabase, rpcData);
           return NextResponse.json({
-            results: rpcData,
+            results: enriched,
             mode: "semantic",
           });
         }
@@ -94,11 +95,14 @@ async function handleSearch(query: string, itemId: string | null, limit: number)
       return NextResponse.json({ error: keywordError.message }, { status: 500 });
     }
 
+    const rawResults = (keywordData || []).map((row) => ({
+      ...row,
+      score: 1.0,
+    }));
+    const enriched = await enrichResultsWithItems(supabase, rawResults);
+
     return NextResponse.json({
-      results: (keywordData || []).map((row) => ({
-        ...row,
-        score: 1.0,
-      })),
+      results: enriched,
       mode: "keyword",
     });
   } catch (err: any) {
@@ -107,4 +111,28 @@ async function handleSearch(query: string, itemId: string | null, limit: number)
       { status: 500 }
     );
   }
+}
+
+async function enrichResultsWithItems(supabase: any, results: any[]) {
+  if (!results.length) return [];
+  const itemIds = Array.from(new Set(results.map((r) => r.item_id).filter(Boolean)));
+  if (!itemIds.length) return results;
+
+  const { data: items } = await supabase
+    .from("items")
+    .select("id, title, source_type")
+    .in("id", itemIds);
+
+  const itemMap = new Map<string, { title?: string | null; source_type?: string }>(
+    (items || []).map((it: any) => [it.id, it])
+  );
+
+  return results.map((r) => {
+    const item = itemMap.get(r.item_id);
+    return {
+      ...r,
+      item_title: item?.title || "Untitled Item",
+      source_type: item?.source_type || "video",
+    };
+  });
 }
