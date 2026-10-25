@@ -75,6 +75,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
 
   // Player refs
   const ytPlayerRef = useRef<any>(null);
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
   const activeSegmentRef = useRef<HTMLDivElement | null>(null);
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
@@ -261,6 +262,9 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
           ytPlayerRef.current.destroy();
         } catch {}
         ytPlayerRef.current = null;
+      }
+      if (playerContainerRef.current) {
+        playerContainerRef.current.innerHTML = '<div id="youtube-player" class="w-full h-full"></div>';
       }
     };
   }, [item.source_type, item.video_id, initialTime]);
@@ -491,7 +495,10 @@ ${transcriptText || "No transcript available."}
         <div className="lg:col-span-7 flex flex-col gap-6">
           {/* Media Player Container */}
           {item.source_type === "youtube" && item.video_id ? (
-            <div className="rounded-2xl overflow-hidden bg-black shadow-xl border border-[var(--border-subtle)] aspect-video">
+            <div
+              ref={playerContainerRef}
+              className="rounded-2xl overflow-hidden bg-black shadow-xl border border-[var(--border-subtle)] aspect-video"
+            >
               <div id="youtube-player" className="w-full h-full" />
             </div>
           ) : (item.source_type === "video" || item.source_type === "audio") && mediaUrl ? (
