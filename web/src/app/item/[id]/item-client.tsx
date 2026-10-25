@@ -54,6 +54,8 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   const supabase = createClient();
 
   const [currentTime, setCurrentTime] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<"overview" | "chapters" | "transcript">("overview");
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
 
@@ -68,6 +70,9 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   const [copied, setCopied] = useState(false);
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
+  // Timestamp copy toast feedback
+  const [copiedTimestampIndex, setCopiedTimestampIndex] = useState<number | null>(null);
+
   // Player refs
   const ytPlayerRef = useRef<any>(null);
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
@@ -75,6 +80,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
 
   const initialTime = parseFloat(searchParams.get("t") || "0");
+  const totalDuration = item.duration_sec || (item.chapters && item.chapters.length > 0 ? item.chapters[item.chapters.length - 1].end : 0) || 1;
 
   // Format time helpers
   function formatTime(sec: number) {
@@ -92,6 +98,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
       try {
         ytPlayerRef.current.seekTo(sec, true);
         ytPlayerRef.current.playVideo();
+        setIsPlaying(true);
       } catch (err) {
         console.warn("YouTube seek error:", err);
       }
@@ -99,11 +106,78 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
       try {
         mediaRef.current.currentTime = sec;
         mediaRef.current.play();
+        setIsPlaying(true);
       } catch (err) {
         console.warn("Media seek error:", err);
       }
     }
   }
+
+  // Toggle Play / Pause
+  function togglePlayPause() {
+    if (item.source_type === "youtube" && ytPlayerRef.current) {
+      try {
+        const state = ytPlayerRef.current.getPlayerState?.();
+        if (state === 1) {
+          ytPlayerRef.current.pauseVideo();
+          setIsPlaying(false);
+        } else {
+          ytPlayerRef.current.playVideo();
+          setIsPlaying(true);
+        }
+      } catch {}
+    } else if (mediaRef.current) {
+      if (mediaRef.current.paused) {
+        mediaRef.current.play();
+        setIsPlaying(true);
+      } else {
+        mediaRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  }
+
+  // Set Playback Speed
+  function changePlaybackSpeed(speed: number) {
+    setPlaybackSpeed(speed);
+    if (item.source_type === "youtube" && ytPlayerRef.current) {
+      try {
+        ytPlayerRef.current.setPlaybackRate?.(speed);
+      } catch {}
+    } else if (mediaRef.current) {
+      mediaRef.current.playbackRate = speed;
+    }
+  }
+
+  // Keyboard Navigation (Space for play/pause, Arrow keys for seek)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't trigger if user is typing in an input
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        seekTo(Math.max(0, currentTime - 5));
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        seekTo(Math.min(totalDuration, currentTime + 5));
+      } else if (e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        seekTo(Math.max(0, currentTime - 10));
+      } else if (e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        seekTo(Math.min(totalDuration, currentTime + 10));
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentTime, totalDuration]);
 
   // Initialize YouTube IFrame API
   useEffect(() => {
@@ -127,7 +201,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
             }
           },
           onStateChange: (event: any) => {
-            // YT.PlayerState.PLAYING = 1
+            setIsPlaying(event.data === 1);
           },
         },
       });
@@ -155,7 +229,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
           // ignore if player destroyed
         }
       }
-    }, 300);
+    }, 250);
 
     return () => {
       clearInterval(interval);
@@ -236,6 +310,15 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  // Copy direct link to timestamp
+  function handleCopyTimestampLink(e: React.MouseEvent, sec: number, index: number) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/item/${item.id}?t=${Math.floor(sec)}`;
+    navigator.clipboard.writeText(url);
+    setCopiedTimestampIndex(index);
+    setTimeout(() => setCopiedTimestampIndex(null), 2000);
   }
 
   // Export to Markdown (client-side download)
@@ -360,7 +443,7 @@ ${transcriptText || "No transcript available."}
 
       {/* Main Grid: Left Side (Media & Content), Right Side (Transcript & Timeline) */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (Player + Summary + Key Points) */}
+        {/* Left Column (Player + Chapter Scrubber + Summary + Key Points) */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           {/* Media Player Container */}
           {item.source_type === "youtube" && item.video_id ? (
@@ -376,6 +459,8 @@ ${transcriptText || "No transcript available."}
                   controls
                   className="w-full rounded-xl aspect-video bg-black"
                   onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                 />
               ) : (
                 <div className="p-6 flex flex-col items-center justify-center gap-4">
@@ -391,11 +476,79 @@ ${transcriptText || "No transcript available."}
                     controls
                     className="w-full max-w-md"
                     onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
                   />
                 </div>
               )}
             </div>
           ) : null}
+
+          {/* Interactive Chapter Timeline Scrubber & Speed Controls */}
+          {item.has_timestamps && item.chapters && item.chapters.length > 0 && (
+            <div className="glass-card p-4 rounded-xl border border-[var(--border-subtle)] space-y-2">
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[var(--accent)] font-bold">
+                    {formatTime(currentTime)}
+                  </span>
+                  <span>/</span>
+                  <span className="font-mono">{formatTime(totalDuration)}</span>
+                </div>
+
+                {/* Playback speed selector */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] text-[var(--text-muted)] mr-1">Speed:</span>
+                  {[0.75, 1, 1.25, 1.5, 2].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => changePlaybackSpeed(s)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all ${
+                        playbackSpeed === s
+                          ? "bg-[var(--accent)] text-white font-bold"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+                      }`}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Segmented Chapter Timeline Bar */}
+              <div className="h-3 w-full bg-[var(--bg-primary)] rounded-full overflow-hidden flex gap-0.5 p-0.5 border border-[var(--border-subtle)]">
+                {item.chapters.map((ch, idx) => {
+                  const chDuration = Math.max(1, ch.end - ch.start);
+                  const widthPercent = (chDuration / totalDuration) * 100;
+                  const isActive = idx === currentChapterIndex;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => seekTo(ch.start)}
+                      style={{ width: `${widthPercent}%` }}
+                      title={`${ch.title} (${formatTime(ch.start)} - ${formatTime(ch.end)})`}
+                      className={`h-full rounded-sm cursor-pointer transition-all ${
+                        isActive
+                          ? "bg-[var(--accent)] shadow-sm"
+                          : "bg-[var(--border-subtle)] hover:bg-[var(--accent)]/50"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-0.5">
+                <span className="truncate">
+                  {currentChapterIndex >= 0 && item.chapters[currentChapterIndex]
+                    ? `Current: ${item.chapters[currentChapterIndex].title}`
+                    : "Click on timeline to jump"}
+                </span>
+                <span className="hidden sm:inline text-[10px] text-[var(--text-muted)]">
+                  Space: Play/Pause &bull; &larr;/&rarr;: &plusmn;5s
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-2">
@@ -627,17 +780,36 @@ ${transcriptText || "No transcript available."}
                     key={idx}
                     ref={isActive ? activeSegmentRef : null}
                     onClick={() => seekTo(seg.start)}
-                    className={`p-2.5 rounded-xl transition-all cursor-pointer border ${
+                    className={`p-2.5 rounded-xl transition-all cursor-pointer border group relative ${
                       isActive
                         ? "bg-[var(--accent-subtle)] border-[var(--accent)] shadow-sm text-[var(--text-primary)] font-medium"
                         : "hover:bg-[var(--bg-card-hover)] border-transparent text-[var(--text-secondary)]"
                     }`}
                   >
-                    <div className="flex items-start gap-2">
-                      <span className="font-mono text-[11px] text-[var(--accent)] shrink-0 mt-0.5 font-semibold">
-                        {formatTime(seg.start)}
-                      </span>
-                      <p className="text-xs leading-relaxed flex-1">{seg.text}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 flex-1">
+                        <span className="font-mono text-[11px] text-[var(--accent)] shrink-0 mt-0.5 font-semibold">
+                          {formatTime(seg.start)}
+                        </span>
+                        <p className="text-xs leading-relaxed flex-1">{seg.text}</p>
+                      </div>
+
+                      {/* Copy Timestamp Link on hover */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyTimestampLink(e, seg.start, idx)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-muted)] hover:text-[var(--accent)] rounded transition-opacity"
+                        title="Copy link to this timestamp"
+                      >
+                        {copiedTimestampIndex === idx ? (
+                          <span className="text-[10px] text-emerald-400 font-semibold">Copied!</span>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                          </svg>
+                        )}
+                      </button>
                     </div>
                   </div>
                 );
