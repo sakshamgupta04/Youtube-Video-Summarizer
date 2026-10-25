@@ -202,12 +202,20 @@ def _process_understanding_pipeline(
 
     # 5. Summarize (Map-Reduce: chapter summaries + overall summary)
     db.table("items").update({"progress": 94}).eq("id", item_id).execute()
-    chapters_with_summaries, overall_summary = summarize_chapters_and_overall(
-        segments=segments,
-        chapters=chapters,
-        has_timestamps=has_timestamps,
-    )
-    logger.info(f"Generated summaries for item {item_id} (overall words: {len(overall_summary.split())}).")
+    try:
+        chapters_with_summaries, overall_summary = summarize_chapters_and_overall(
+            segments=segments,
+            chapters=chapters,
+            has_timestamps=has_timestamps,
+        )
+        logger.info(f"Generated summaries for item {item_id} (overall words: {len(overall_summary.split())}).")
+    except Exception as e:
+        logger.warning(
+            f"Summarizer model failed for item {item_id}: {e}. Falling back to chapters and key points only."
+        )
+        # Fallback table row 6: Show key points and chapters only; mark summary unavailable
+        chapters_with_summaries = chapters
+        overall_summary = "Summary unavailable."
 
     return chapters_with_summaries, key_points, overall_summary
 

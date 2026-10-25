@@ -205,14 +205,21 @@ def process_youtube_video(
     progress_callback: Callable[[int], None] | None = None,
 ) -> tuple[str, list[Segment], int, str | None]:
     """Complete YouTube input ladder:
-    1. Extract video ID and validate 90-min limit.
-    2. Try existing captions.
-    3. If no captions, try yt-dlp audio download + Whisper.
-    4. If both fail, raise friendly error message.
+    1. Check for unsupported links (e.g., Spotify) and extract video ID.
+    2. Validate 90-min limit.
+    3. Try existing captions.
+    4. If no captions, try yt-dlp audio download + Whisper.
+    5. If both fail, raise friendly error message.
 
     Returns:
         (video_id, segments, duration_sec, detected_title)
     """
+    clean = video_url_or_id.strip()
+    if "spotify.com" in clean or clean.startswith("spotify:"):
+        raise ValueError(
+            "Spotify isn't supported yet. Upload the file, or paste the YouTube link."
+        )
+
     video_id = extract_video_id(video_url_or_id)
     if not video_id:
         raise ValueError(

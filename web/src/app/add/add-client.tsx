@@ -122,6 +122,16 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     e.preventDefault();
     setErrorMessage(null);
 
+    const trimmed = youtubeUrl.trim();
+    if (
+      trimmed.includes("spotify.com") ||
+      trimmed.startsWith("spotify:") ||
+      trimmed.includes("open.spotify.com")
+    ) {
+      setErrorMessage("Spotify isn't supported yet. Upload the file, or paste the YouTube link.");
+      return;
+    }
+
     const videoId = extractYouTubeVideoId(youtubeUrl);
     if (!videoId) {
       setErrorMessage(

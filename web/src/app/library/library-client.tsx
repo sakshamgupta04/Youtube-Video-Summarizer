@@ -373,10 +373,10 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
                         <div className="mt-3 max-w-xs">
                           <div className="flex items-center justify-between text-[11px] mb-1">
                             <span className="capitalize text-[var(--accent)] font-medium">
-                              {item.status}...
+                              {item.status === "queued" ? "Waiting for worker..." : `${item.status}...`}
                             </span>
                             <span className="text-[var(--text-muted)] font-mono">
-                              {item.progress || 10}%
+                              {item.status === "queued" ? "0%" : `${item.progress || 10}%`}
                             </span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-[var(--bg-primary)] overflow-hidden border border-[var(--border-subtle)]">
@@ -405,7 +405,17 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium">
                         Failed
                       </span>
-                    ) : null}
+                    ) : item.status === "queued" ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        waiting for worker
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                        Processing
+                      </span>
+                    )}
 
                     {/* Delete action */}
                     <button

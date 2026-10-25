@@ -443,6 +443,26 @@ ${transcriptText || "No transcript available."}
 
       {/* Main Grid: Left Side (Media & Content), Right Side (Transcript & Timeline) */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {item.status === "queued" && (
+          <div className="lg:col-span-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 sm:p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="h-3 w-3 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-300">waiting for worker</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Item is queued. If the worker is asleep or spinning up on free tier, processing will start automatically shortly.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/library"
+              className="text-xs text-amber-400 font-medium px-3 py-1.5 rounded-lg border border-amber-500/30 hover:bg-amber-500/20 transition-all shrink-0"
+            >
+              Library &rarr;
+            </Link>
+          </div>
+        )}
+
         {/* Left Column (Player + Chapter Scrubber + Summary + Key Points) */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           {/* Media Player Container */}
@@ -602,9 +622,20 @@ ${transcriptText || "No transcript available."}
                     Executive Summary
                   </h2>
                 </div>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
-                  {item.summary || "Summarization in progress or not available."}
-                </p>
+                {item.summary === "Summary unavailable." ? (
+                  <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>Summary unavailable for this item. Key points and chapters have been fully preserved below.</span>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+                    {item.summary || "Summarization in progress or not available."}
+                  </p>
+                )}
               </div>
 
               {/* Key Takeaways */}
