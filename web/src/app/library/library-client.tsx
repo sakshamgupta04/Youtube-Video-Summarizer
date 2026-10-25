@@ -302,15 +302,23 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
             <p className="text-sm text-[var(--text-secondary)] mb-6">
               Upload an audio/video file, provide a YouTube URL, or paste text to generate summaries and searchable timelines.
             </p>
-            <Link
-              href="/add"
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-hover)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Add Your First Item
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/add"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-hover)]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add Your First Item
+              </Link>
+              <Link
+                href="/item/sample-cs229"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-6 py-3 text-sm font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+              >
+                <span>✨</span> Explore Sample Library
+              </Link>
+            </div>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="glass-card p-10 text-center rounded-xl border border-[var(--border-subtle)]">

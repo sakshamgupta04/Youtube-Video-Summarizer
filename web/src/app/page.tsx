@@ -79,15 +79,96 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Sample Library (No waiting required) */}
+      <section className="mt-16 w-full max-w-4xl mx-auto text-left">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              Try the Sample Library
+            </h2>
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              Explore 3 pre-processed public lectures with clickable chapter timelines, synchronized transcripts, and semantic search—instant interactive demo, zero waiting.
+            </p>
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent-subtle)]">
+            Instant Demo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              id: "sample-cs229",
+              title: "Stanford CS229: ML Introduction",
+              speaker: "Prof. Andrew Ng",
+              duration: "45 min",
+              chaptersCount: 5,
+              badge: "Machine Learning",
+              description: "Gradient descent, normal equations, and supervised regression formulation.",
+            },
+            {
+              id: "sample-karpathy",
+              title: "Andrej Karpathy: LLMs & Deep Learning",
+              speaker: "Lex Fridman Podcast",
+              duration: "60 min",
+              chaptersCount: 5,
+              badge: "Artificial Intelligence",
+              description: "Transformer architectures, SFT, RLHF alignment, and LLM operating systems.",
+            },
+            {
+              id: "sample-nextjs",
+              title: "Next.js 15: Full Architecture",
+              speaker: "Architecture Deep Dive",
+              duration: "40 min",
+              chaptersCount: 5,
+              badge: "Web Systems",
+              description: "Server Components, React Suspense streaming, and Partial Prerendering.",
+            },
+          ].map((item) => (
+            <Link
+              key={item.id}
+              href={`/item/${item.id}`}
+              className="glass-card group p-5 rounded-2xl border border-[var(--border-subtle)] hover:border-[var(--accent)] transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[var(--accent-subtle)] text-[var(--accent)]">
+                    {item.badge}
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] font-mono">
+                    {item.duration}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-sm text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors line-clamp-2 mb-1">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">
+                  {item.speaker}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs font-semibold text-[var(--accent)]">
+                <span>{item.chaptersCount} Chapters &bull; Notes</span>
+                <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Feature pills */}
-      <div className="fade-in mt-20 flex flex-wrap justify-center gap-3 max-w-lg">
+      <div className="fade-in mt-16 mb-10 flex flex-wrap justify-center gap-3 max-w-lg">
         {[
-          "🎙️ Transcription",
-          "📑 Smart Chapters",
-          "🔑 Key Points",
-          "📝 Summaries",
-          "🔍 Semantic Search",
-          "📤 Export Notes",
+          "🎙️ Faster-Whisper int8",
+          "📑 NLTK Chaptering",
+          "🔑 KeyBERT Keywords",
+          "📝 LoRA Summaries",
+          "🔍 pgvector Search",
+          "📤 Markdown Export",
         ].map((feature) => (
           <span
             key={feature}
