@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 50
     worker_secret: str = "echonotes-shared-secret-key-384"
     summarizer_model: str = "sshleifer/distilbart-cnn-12-6"
+    enable_background_loop: bool = True
 
     model_config = {
         "env_file": [str(_ENV_FILE), ".env"],
