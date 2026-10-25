@@ -1,0 +1,222 @@
+[
+  {
+    "video_id": "vid_01_stanford_cs229",
+    "title": "Stanford CS229: Machine Learning Introduction",
+    "duration_minutes": 45,
+    "total_units": 45,
+    "reference_boundaries": "100000001000000000100000000100000000100000000",
+    "predicted_boundaries": "100000001000000000010000000100000000100000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Introduction & Course Logistics"},
+      {"start_min": 8, "title": "Supervised vs Unsupervised Learning"},
+      {"start_min": 19, "title": "Linear Regression and Cost Functions"},
+      {"start_min": 28, "title": "Batch Gradient Descent Algorithm"},
+      {"start_min": 36, "title": "Normal Equations and Matrix Derivatives"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Introduction to Machine Learning"},
+      {"start_min": 8, "title": "Supervised Learning Taxonomy"},
+      {"start_min": 20, "title": "Linear Regression Formulation"},
+      {"start_min": 28, "title": "Gradient Descent Optimization"},
+      {"start_min": 36, "title": "Matrix Calculus & Normal Equation"}
+    ]
+  },
+  {
+    "video_id": "vid_02_karpathy_ai",
+    "title": "Lex Fridman Podcast: Andrej Karpathy on AI",
+    "duration_minutes": 60,
+    "total_units": 60,
+    "reference_boundaries": "100000000001000000000010000000001000000000001000000000000000",
+    "predicted_boundaries": "100000000001000000000001000000001000000000001000000000000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Early Days of Deep Learning & ConvNets"},
+      {"start_min": 11, "title": "Tesla Autopilot Vision Pipeline"},
+      {"start_min": 23, "title": "Large Language Models & Next-Token Prediction"},
+      {"start_min": 33, "title": "RLHF and Synthetic Data Generation"},
+      {"start_min": 45, "title": "The Future of AGI and Human Potential"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Computer Vision Foundations"},
+      {"start_min": 11, "title": "Autopilot Neural Networks"},
+      {"start_min": 24, "title": "Transformer Architecture & Pretraining"},
+      {"start_min": 33, "title": "Post-training & Reinforcement Learning"},
+      {"start_min": 45, "title": "AGI Horizons & General Intelligence"}
+    ]
+  },
+  {
+    "video_id": "vid_03_nextjs_architecture",
+    "title": "Next.js 15 Full Course & Architecture Deep Dive",
+    "duration_minutes": 40,
+    "total_units": 40,
+    "reference_boundaries": "1000000100000001000000001000000001000000",
+    "predicted_boundaries": "1000000100000001000000000100000001000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "App Router and Server Components Architecture"},
+      {"start_min": 7, "title": "Server Actions and Data Mutations"},
+      {"start_min": 15, "title": "Streaming SSR with React Suspense"},
+      {"start_min": 24, "title": "Caching, Incremental Static Regeneration & PPR"},
+      {"start_min": 33, "title": "Production Deployment & Edge Runtime"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Server Components Overview"},
+      {"start_min": 7, "title": "Mutations via Server Actions"},
+      {"start_min": 15, "title": "React Suspense Streaming"},
+      {"start_min": 25, "title": "Partial Prerendering and Caching"},
+      {"start_min": 33, "title": "Vercel Edge Deployment"}
+    ]
+  },
+  {
+    "video_id": "vid_04_mit_6006_sorting",
+    "title": "MIT 6.006: Introduction to Algorithms & Sorting",
+    "duration_minutes": 50,
+    "total_units": 50,
+    "reference_boundaries": "10000000010000000001000000000010000000001000000000",
+    "predicted_boundaries": "10000000010000000001000000000010000000000100000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Course Overview and Asymptotic Complexity"},
+      {"start_min": 9, "title": "Insertion Sort and Invariants"},
+      {"start_min": 19, "title": "Merge Sort and Divide-and-Conquer"},
+      {"start_min": 30, "title": "Solving Recurrences with Master Theorem"},
+      {"start_min": 40, "title": "Lower Bounds for Comparison Sorting"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Asymptotic Notation"},
+      {"start_min": 9, "title": "Insertion Sort Mechanics"},
+      {"start_min": 19, "title": "Divide-and-Conquer Merge Sort"},
+      {"start_min": 30, "title": "Master Theorem Analysis"},
+      {"start_min": 41, "title": "Decision Trees & Sorting Bounds"}
+    ]
+  },
+  {
+    "video_id": "vid_05_raft_consensus",
+    "title": "Building Distributed Systems with Raft Consensus",
+    "duration_minutes": 35,
+    "total_units": 35,
+    "reference_boundaries": "10000001000000100000001000000100000",
+    "predicted_boundaries": "10000001000000100000001000000100000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Consensus Problem & Replicated State Machines"},
+      {"start_min": 7, "title": "Leader Election and Randomized Timeouts"},
+      {"start_min": 14, "title": "Log Replication & Consistency Guarantees"},
+      {"start_min": 22, "title": "Cluster Membership Changes & Joint Consensus"},
+      {"start_min": 29, "title": "Log Compaction and Snapshotting"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Replicated State Machines"},
+      {"start_min": 7, "title": "Leader Election Protocol"},
+      {"start_min": 14, "title": "Log Entry Replication"},
+      {"start_min": 22, "title": "Joint Consensus Configuration"},
+      {"start_min": 29, "title": "Snapshot Mechanisms"}
+    ]
+  },
+  {
+    "video_id": "vid_06_huberman_dopamine",
+    "title": "The Huberman Lab: Optimize Dopamine for Focus",
+    "duration_minutes": 55,
+    "total_units": 55,
+    "reference_boundaries": "1000000000100000000001000000000010000000000100000000000",
+    "predicted_boundaries": "1000000000100000000000100000000010000000000100000000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Neurobiology of Dopamine and Motivation"},
+      {"start_min": 10, "title": "Baseline vs Peak Dopamine Spikes"},
+      {"start_min": 21, "title": "Intermittent Reward Schedules & Drive"},
+      {"start_min": 32, "title": "Tools: Cold Exposure, Sunlight, and Nutrition"},
+      {"start_min": 43, "title": "Managing Dopamine Depletion and Burnout"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Dopamine Pathways"},
+      {"start_min": 10, "title": "Tonic vs Phasic Signaling"},
+      {"start_min": 22, "title": "Intermittent Reinforcement Dynamics"},
+      {"start_min": 32, "title": "Physical Protocols for Motivation"},
+      {"start_min": 43, "title": "Resetting Baseline Reserves"}
+    ]
+  },
+  {
+    "video_id": "vid_07_python_concurrency",
+    "title": "Python Concurrency: Asyncio, Threading, Multiprocessing",
+    "duration_minutes": 30,
+    "total_units": 30,
+    "reference_boundaries": "100000100000100000010000010000",
+    "predicted_boundaries": "100000100000010000010000010000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Global Interpreter Lock (GIL) Explained"},
+      {"start_min": 6, "title": "Thread Pools for I/O Bound Tasks"},
+      {"start_min": 12, "title": "Process Pools for CPU Bound Computation"},
+      {"start_min": 19, "title": "Asyncio Event Loop & Coroutines"},
+      {"start_min": 25, "title": "Benchmark Comparison & Choosing the Right Tool"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Understanding the GIL"},
+      {"start_min": 6, "title": "Threading in Python"},
+      {"start_min": 13, "title": "Multiprocessing Architecture"},
+      {"start_min": 19, "title": "Async/Await Event Loops"},
+      {"start_min": 25, "title": "Performance Benchmarks"}
+    ]
+  },
+  {
+    "video_id": "vid_08_database_internals",
+    "title": "Database Internals: B-Trees, LSM-Trees & WAL",
+    "duration_minutes": 45,
+    "total_units": 45,
+    "reference_boundaries": "100000000100000000100000000100000000010000000",
+    "predicted_boundaries": "100000000100000000100000000100000000010000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Storage Engine Architecture and Disk I/O"},
+      {"start_min": 9, "title": "B+ Tree Indexing and Page Splits"},
+      {"start_min": 18, "title": "Log-Structured Merge-Trees & MemTables"},
+      {"start_min": 27, "title": "Write-Ahead Logging (WAL) & Crash Recovery"},
+      {"start_min": 36, "title": "Compaction Strategies: Leveled vs Size-Tiered"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Storage Engine Basics"},
+      {"start_min": 9, "title": "B+ Tree Data Structures"},
+      {"start_min": 18, "title": "LSM-Tree Write Path"},
+      {"start_min": 27, "title": "WAL Recovery Protocols"},
+      {"start_min": 36, "title": "SSTable Compaction"}
+    ]
+  },
+  {
+    "video_id": "vid_09_cs50_cybersecurity",
+    "title": "Harvard CS50: Cybersecurity Fundamentals",
+    "duration_minutes": 40,
+    "total_units": 40,
+    "reference_boundaries": "1000000010000000100000001000000010000000",
+    "predicted_boundaries": "1000000010000000100000000100000010000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Threat Modeling and Attack Vectors"},
+      {"start_min": 8, "title": "Symmetric vs Asymmetric Cryptography"},
+      {"start_min": 16, "title": "Public Key Infrastructure (PKI) & TLS"},
+      {"start_min": 24, "title": "Web Vulnerabilities: SQLi, XSS, and CSRF"},
+      {"start_min": 32, "title": "Defensive Architecture & Multi-Factor Auth"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "Security Threat Vectors"},
+      {"start_min": 8, "title": "Cryptographic Primitives"},
+      {"start_min": 16, "title": "TLS Handshakes and Certificates"},
+      {"start_min": 25, "title": "Common Web Exploits"},
+      {"start_min": 32, "title": "Zero-Trust & Defensive Measures"}
+    ]
+  },
+  {
+    "video_id": "vid_10_vector_databases",
+    "title": "Designing Scalable Vector Databases for AI",
+    "duration_minutes": 50,
+    "total_units": 50,
+    "reference_boundaries": "10000000010000000000100000000010000000000100000000",
+    "predicted_boundaries": "10000000010000000000100000000001000000000100000000",
+    "reference_chapters": [
+      {"start_min": 0, "title": "Vector Embeddings & High-Dimensional Search"},
+      {"start_min": 9, "title": "Exact k-NN vs Approximate Nearest Neighbors (ANN)"},
+      {"start_min": 20, "title": "Hierarchical Navigable Small World (HNSW) Graphs"},
+      {"start_min": 30, "title": "Product Quantization (PQ) & Scalar Compression"},
+      {"start_min": 41, "title": "Filtering, Inverted Indices & Hybrid Search"}
+    ],
+    "predicted_chapters": [
+      {"start_min": 0, "title": "High-Dimensional Vector Spaces"},
+      {"start_min": 9, "title": "ANN Indexing Overview"},
+      {"start_min": 20, "title": "HNSW Graph Construction"},
+      {"start_min": 31, "title": "Quantization Strategies"},
+      {"start_min": 41, "title": "Metadata Filtering & Hybrid Search"}
+    ]
+  }
+]
