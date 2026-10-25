@@ -1,0 +1,276 @@
+{
+  "corpus": [
+    {
+      "id": "chunk_01",
+      "text": "Stochastic gradient descent computes gradients on mini-batches rather than the entire dataset, introducing noise that helps escape saddle points in non-convex loss landscapes."
+    },
+    {
+      "id": "chunk_02",
+      "text": "Backpropagation computes error gradients through deep layers by applying the mathematical chain rule backwards from the loss objective to the input layer weights."
+    },
+    {
+      "id": "chunk_03",
+      "text": "The transformer self-attention mechanism computes attention weights using scaled dot products between query and key projection vectors."
+    },
+    {
+      "id": "chunk_04",
+      "text": "The scaling factor of 1 divided by the square root of the head dimension d_k prevents dot products from growing excessively large and driving the softmax derivative to zero."
+    },
+    {
+      "id": "chunk_05",
+      "text": "Reinforcement Learning from Human Feedback (RLHF) trains a reward model on pairwise human preference rankings and uses PPO to optimize the language model policy."
+    },
+    {
+      "id": "chunk_06",
+      "text": "Next.js Server Components run exclusively on the server, avoiding sending large JavaScript library bundles to the client browser and improving Core Web Vitals."
+    },
+    {
+      "id": "chunk_07",
+      "text": "Server Actions allow client forms to trigger secure asynchronous server-side mutations without needing manual REST endpoint route declarations."
+    },
+    {
+      "id": "chunk_08",
+      "text": "Merge Sort is a stable comparison-based sorting algorithm with guaranteed O(n log n) worst-case time complexity that works by dividing arrays into halves."
+    },
+    {
+      "id": "chunk_09",
+      "text": "The Master Theorem provides a cookbook solution for analyzing the asymptotic time complexity of divide-and-conquer recurrence relations of the form T(n) = aT(n/b) + f(n)."
+    },
+    {
+      "id": "chunk_10",
+      "text": "The Raft consensus algorithm decomposes replicated state machine agreement into leader election, log replication, and safety invariants."
+    },
+    {
+      "id": "chunk_11",
+      "text": "In Raft, randomized election timeouts between 150ms and 300ms ensure that split votes are rare when multiple candidate nodes compete for leadership."
+    },
+    {
+      "id": "chunk_12",
+      "text": "Dopamine is not primarily the molecule of pleasure, but rather the neuromodulator of anticipation, motivation, pursuit, and craving."
+    },
+    {
+      "id": "chunk_13",
+      "text": "Engaging in deliberate cold exposure causes a sustained 2.5-fold increase in circulating dopamine levels without a subsequent crash below baseline."
+    },
+    {
+      "id": "chunk_14",
+      "text": "The Python Global Interpreter Lock (GIL) is a mutex that prevents multiple native threads from executing Python bytecodes simultaneously in CPython."
+    },
+    {
+      "id": "chunk_15",
+      "text": "Asyncio uses a single-threaded cooperative multitasking event loop that yields control during non-blocking socket I/O using async and await."
+    },
+    {
+      "id": "chunk_16",
+      "text": "B+ Trees maintain sorted key order on disk with wide branching factors, ensuring that search, insertion, and range queries execute in O(log n) disk page reads."
+    },
+    {
+      "id": "chunk_17",
+      "text": "Log-Structured Merge-Trees (LSM-Trees) buffer incoming writes sequentially in an in-memory MemTable before flushing immutable SSTables to disk."
+    },
+    {
+      "id": "chunk_18",
+      "text": "Write-Ahead Logging (WAL) guarantees durability and crash recovery by appending every transaction to sequential append-only disk storage before updating tables."
+    },
+    {
+      "id": "chunk_19",
+      "text": "Hierarchical Navigable Small World (HNSW) graphs construct multi-layer proximity networks for fast approximate nearest neighbor search with logarithmic complexity."
+    },
+    {
+      "id": "chunk_20",
+      "text": "Product Quantization compresses high-dimensional floating-point vectors into short byte codes by partitioning vector sub-spaces and assigning centroid indices."
+    },
+    {
+      "id": "chunk_21",
+      "text": "CRISPR-Cas9 acts as RNA-guided molecular scissors, binding a single guide RNA to direct endonuclease cleavage at complementary DNA targets."
+    },
+    {
+      "id": "chunk_22",
+      "text": "Protospacer Adjacent Motif (PAM) sequences, such as NGG for Streptococcus pyogenes Cas9, are mandatory recognition motifs required for DNA binding."
+    },
+    {
+      "id": "chunk_23",
+      "text": "Kubernetes Ingress controllers like NGINX manage external HTTP and HTTPS traffic routing to internal service cluster IPs and container pods."
+    },
+    {
+      "id": "chunk_24",
+      "text": "Customer Acquisition Cost (CAC) and Lifetime Value (LTV) determine SaaS unit economics, where an LTV to CAC ratio of 3x or higher signifies a healthy business."
+    },
+    {
+      "id": "chunk_25",
+      "text": "Cross-Site Scripting (XSS) occurs when malicious JavaScript code is injected into dynamic web applications and executed in victims' web browsers."
+    },
+    {
+      "id": "chunk_26",
+      "text": "SQL Injection (SQLi) vulnerabilities allow attackers to interfere with backend queries by injecting SQL syntax through unsanitized user input fields."
+    },
+    {
+      "id": "chunk_27",
+      "text": "Row-Level Security (RLS) in PostgreSQL allows developers to enforce granular per-user data access authorization rules directly inside the database engine."
+    },
+    {
+      "id": "chunk_28",
+      "text": "Faster-Whisper leverages CTranslate2 to perform quantized 8-bit integer inference on Whisper acoustic speech-to-text models with 4x speedup."
+    },
+    {
+      "id": "chunk_29",
+      "text": "KeyBERT extracts representative document keywords and keyphrases by embedding candidate n-grams and calculating cosine similarity to the document vector."
+    },
+    {
+      "id": "chunk_30",
+      "text": "Map-reduce summarization generates concise abstracts of long lectures by first summarizing individual chapters and then recursively synthesizing chapter summaries."
+    }
+  ],
+  "questions": [
+    {
+      "id": "q01",
+      "query": "How does backpropagation compute gradients through hidden layers?",
+      "target_chunk_ids": ["chunk_02"]
+    },
+    {
+      "id": "q02",
+      "query": "Why does stochastic gradient descent escape saddle points?",
+      "target_chunk_ids": ["chunk_01"]
+    },
+    {
+      "id": "q03",
+      "query": "How do transformers compute multi-head self-attention?",
+      "target_chunk_ids": ["chunk_03", "chunk_04"]
+    },
+    {
+      "id": "q04",
+      "query": "Why are dot product attention scores scaled by the square root of dimension?",
+      "target_chunk_ids": ["chunk_04"]
+    },
+    {
+      "id": "q05",
+      "query": "What is the role of RLHF and reward models in post-training language models?",
+      "target_chunk_ids": ["chunk_05"]
+    },
+    {
+      "id": "q06",
+      "query": "What are the performance advantages of Next.js Server Components?",
+      "target_chunk_ids": ["chunk_06"]
+    },
+    {
+      "id": "q07",
+      "query": "How do Next.js Server Actions perform database mutations?",
+      "target_chunk_ids": ["chunk_07"]
+    },
+    {
+      "id": "q08",
+      "query": "What is the time complexity and mechanism of merge sort?",
+      "target_chunk_ids": ["chunk_08"]
+    },
+    {
+      "id": "q09",
+      "query": "How is the Master Theorem used to solve divide and conquer recurrences?",
+      "target_chunk_ids": ["chunk_09"]
+    },
+    {
+      "id": "q10",
+      "query": "How does Raft maintain consistency across replicated state machines?",
+      "target_chunk_ids": ["chunk_10"]
+    },
+    {
+      "id": "q11",
+      "query": "Why does Raft use randomized election timeouts for candidate nodes?",
+      "target_chunk_ids": ["chunk_11"]
+    },
+    {
+      "id": "q12",
+      "query": "What biological function does dopamine serve in motivation and pursuit?",
+      "target_chunk_ids": ["chunk_12"]
+    },
+    {
+      "id": "q13",
+      "query": "How does deliberate cold exposure influence baseline dopamine levels?",
+      "target_chunk_ids": ["chunk_13"]
+    },
+    {
+      "id": "q14",
+      "query": "What is the Python Global Interpreter Lock and how does it limit threading?",
+      "target_chunk_ids": ["chunk_14"]
+    },
+    {
+      "id": "q15",
+      "query": "How does asyncio event loop achieve non-blocking concurrency?",
+      "target_chunk_ids": ["chunk_15"]
+    },
+    {
+      "id": "q16",
+      "query": "How do B+ Trees optimize disk page reads for range queries?",
+      "target_chunk_ids": ["chunk_16"]
+    },
+    {
+      "id": "q17",
+      "query": "How do LSM-Trees and MemTables handle high throughput write workloads?",
+      "target_chunk_ids": ["chunk_17"]
+    },
+    {
+      "id": "q18",
+      "query": "How does write-ahead logging ensure crash recovery in database systems?",
+      "target_chunk_ids": ["chunk_18"]
+    },
+    {
+      "id": "q19",
+      "query": "How do HNSW graphs perform approximate nearest neighbor vector search?",
+      "target_chunk_ids": ["chunk_19"]
+    },
+    {
+      "id": "q20",
+      "query": "What is product quantization and how does it compress vector embeddings?",
+      "target_chunk_ids": ["chunk_20"]
+    },
+    {
+      "id": "q21",
+      "query": "How does Cas9 endonuclease use guide RNA to introduce double strand breaks?",
+      "target_chunk_ids": ["chunk_21"]
+    },
+    {
+      "id": "q22",
+      "query": "What is the function of the protospacer adjacent motif sequence in CRISPR?",
+      "target_chunk_ids": ["chunk_22"]
+    },
+    {
+      "id": "q23",
+      "query": "How do Kubernetes ingress controllers route traffic to container pods?",
+      "target_chunk_ids": ["chunk_23"]
+    },
+    {
+      "id": "q24",
+      "query": "What is an ideal LTV to CAC ratio for SaaS unit economics?",
+      "target_chunk_ids": ["chunk_24"]
+    },
+    {
+      "id": "q25",
+      "query": "How do attackers execute Cross-Site Scripting vulnerabilities in web browsers?",
+      "target_chunk_ids": ["chunk_25"]
+    },
+    {
+      "id": "q26",
+      "query": "How can unsanitized user input lead to SQL injection vulnerabilities?",
+      "target_chunk_ids": ["chunk_26"]
+    },
+    {
+      "id": "q27",
+      "query": "How does PostgreSQL Row-Level Security enforce per-user access control?",
+      "target_chunk_ids": ["chunk_27"]
+    },
+    {
+      "id": "q28",
+      "query": "How does Faster-Whisper achieve fast speech-to-text inference with int8 quantization?",
+      "target_chunk_ids": ["chunk_28"]
+    },
+    {
+      "id": "q29",
+      "query": "How does KeyBERT identify the most relevant keyphrases in a document?",
+      "target_chunk_ids": ["chunk_29"]
+    },
+    {
+      "id": "q30",
+      "query": "How does map-reduce summarization generate hierarchical summaries of long content?",
+      "target_chunk_ids": ["chunk_30"]
+    }
+  ]
+}
