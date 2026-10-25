@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { SAMPLE_ITEMS } from "@/lib/sample-data";
 
 interface Item {
   id: string;
@@ -30,7 +31,7 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
 
   // Filter & search state
   const [searchFilter, setSearchFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "done" | "processing" | "failed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "done" | "processing" | "failed" | "samples">("all");
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -102,18 +103,35 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
   const totalMinutes = Math.round(totalSeconds / 60);
 
   // Filtered items
-  const filteredItems = items.filter((item) => {
-    const matchesSearch = !searchFilter.trim() ||
-      (item.title || "untitled item").toLowerCase().includes(searchFilter.toLowerCase());
+  const sampleItemsList: Item[] = Object.values(SAMPLE_ITEMS).map((s) => ({
+    id: s.id,
+    title: s.title,
+    source_type: s.source_type,
+    status: "done",
+    progress: 100,
+    duration_sec: s.duration_sec,
+    has_timestamps: s.has_timestamps,
+    created_at: s.created_at,
+    error: null,
+  }));
 
-    if (!matchesSearch) return false;
+  const filteredItems = statusFilter === "samples"
+    ? sampleItemsList.filter((item) =>
+        !searchFilter.trim() ||
+        (item.title || "").toLowerCase().includes(searchFilter.toLowerCase())
+      )
+    : items.filter((item) => {
+        const matchesSearch = !searchFilter.trim() ||
+          (item.title || "untitled item").toLowerCase().includes(searchFilter.toLowerCase());
 
-    if (statusFilter === "all") return true;
-    if (statusFilter === "done") return item.status === "done";
-    if (statusFilter === "failed") return item.status === "failed";
-    if (statusFilter === "processing") return item.status !== "done" && item.status !== "failed";
-    return true;
-  });
+        if (!matchesSearch) return false;
+
+        if (statusFilter === "all") return true;
+        if (statusFilter === "done") return item.status === "done";
+        if (statusFilter === "failed") return item.status === "failed";
+        if (statusFilter === "processing") return item.status !== "done" && item.status !== "failed";
+        return true;
+      });
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[var(--bg-primary)]">
@@ -236,12 +254,13 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
         {/* Filter Controls (Search + Status Chips) */}
         {items.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: "all", label: "All" },
                 { id: "done", label: "Done" },
                 { id: "processing", label: "Processing" },
                 { id: "failed", label: "Failed" },
+                { id: "samples", label: "✨ Sample Demos (3)" },
               ].map((f) => (
                 <button
                   key={f.id}
@@ -319,12 +338,13 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
                 </svg>
                 Add Your First Item
               </Link>
-              <Link
-                href="/item/sample-cs229"
+              <button
+                type="button"
+                onClick={() => setStatusFilter("samples")}
                 className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-6 py-3 text-sm font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
               >
-                <span>✨</span> Explore Sample Library
-              </Link>
+                <span>✨</span> View 3 Sample Demos
+              </button>
             </div>
           </div>
         ) : filteredItems.length === 0 ? (
@@ -404,7 +424,11 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    {isDone ? (
+                    {item.id.startsWith("sample-") ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent-subtle)] font-medium">
+                        ✨ Demo
+                      </span>
+                    ) : isDone ? (
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
                         Done
                       </span>
@@ -425,17 +449,19 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
                     )}
 
                     {/* Delete action */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleDelete(e, item.id)}
-                      disabled={deletingId === item.id}
-                      className="p-2 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
-                      title="Delete item"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
+                    {!item.id.startsWith("sample-") && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDelete(e, item.id)}
+                        disabled={deletingId === item.id}
+                        className="p-2 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                        title="Delete item"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

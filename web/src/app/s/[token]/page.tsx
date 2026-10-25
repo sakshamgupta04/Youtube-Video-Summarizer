@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { SAMPLE_ITEMS } from "@/lib/sample-data";
 import ShareClient from "./share-client";
 
 interface Chapter {
@@ -18,6 +19,22 @@ export default async function SharedItemPage({ params }: SharedPageProps) {
 
   if (!token) {
     notFound();
+  }
+
+  // Check if viewing a shared public sample item
+  if (SAMPLE_ITEMS[token]) {
+    const sampleItem = SAMPLE_ITEMS[token];
+    return (
+      <ShareClient
+        title={sampleItem.title}
+        durationSec={sampleItem.duration_sec}
+        sourceType={sampleItem.source_type}
+        summary={sampleItem.summary}
+        keyPoints={sampleItem.key_points}
+        chapters={sampleItem.chapters}
+        createdAt={sampleItem.created_at}
+      />
+    );
   }
 
   // Use the admin service client on the server side only to read by share_token

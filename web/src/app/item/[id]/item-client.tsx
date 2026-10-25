@@ -297,6 +297,27 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
     }
 
     setIsSearching(true);
+
+    // Fast client-side search for sample items or immediate local matching
+    if (item.id.startsWith("sample-") || (item.transcript && item.transcript.length > 0)) {
+      const q = searchQuery.toLowerCase().trim();
+      const localMatches = (item.transcript || [])
+        .filter((seg) => seg.text.toLowerCase().includes(q))
+        .slice(0, 8)
+        .map((seg) => ({
+          item_id: item.id,
+          start_sec: seg.start,
+          text: seg.text,
+          score: 1.0,
+        }));
+
+      if (localMatches.length > 0 || item.id.startsWith("sample-")) {
+        setSearchResults(localMatches);
+        setIsSearching(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(
         `/api/search?q=${encodeURIComponent(searchQuery)}&item_id=${item.id}&limit=8`
@@ -316,6 +337,10 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   async function handleOpenShare() {
     setIsShareModalOpen(true);
     if (!shareToken) {
+      if (item.id.startsWith("sample-")) {
+        setShareToken(item.id);
+        return;
+      }
       setIsGeneratingShare(true);
       try {
         const generatedToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);

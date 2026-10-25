@@ -8,6 +8,7 @@ export interface SampleItem {
   progress: 100;
   duration_sec: number;
   has_timestamps: boolean;
+  share_token?: string;
   created_at: string;
   summary: string;
   key_points: string[];
@@ -29,8 +30,9 @@ export const SAMPLE_ITEMS: Record<string, SampleItem> = {
     id: "sample-cs229",
     title: "Stanford CS229: Machine Learning Introduction & Linear Regression",
     source_type: "youtube",
-    source_url: "https://www.youtube.com/watch?v=jGwO_EiCahm",
-    video_id: "jGwO_EiCahm",
+    source_url: "https://www.youtube.com/watch?v=UzxYlbK2c7E",
+    video_id: "UzxYlbK2c7E",
+    share_token: "sample-cs229",
     status: "done",
     progress: 100,
     duration_sec: 2700,
@@ -102,6 +104,7 @@ export const SAMPLE_ITEMS: Record<string, SampleItem> = {
     source_type: "youtube",
     source_url: "https://www.youtube.com/watch?v=zjkBMFhNj_g",
     video_id: "zjkBMFhNj_g",
+    share_token: "sample-karpathy",
     status: "done",
     progress: 100,
     duration_sec: 3600,
@@ -171,6 +174,7 @@ export const SAMPLE_ITEMS: Record<string, SampleItem> = {
     source_type: "youtube",
     source_url: "https://www.youtube.com/watch?v=wm5gMKuwSYk",
     video_id: "wm5gMKuwSYk",
+    share_token: "sample-nextjs",
     status: "done",
     progress: 100,
     duration_sec: 2400,
