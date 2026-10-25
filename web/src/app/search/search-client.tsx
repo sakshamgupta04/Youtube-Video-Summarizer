@@ -34,16 +34,19 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
   const [mode, setMode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"relevance" | "timeline">("relevance");
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  async function handleSearch(e?: React.FormEvent, customQuery?: string) {
+    if (e) e.preventDefault();
+    const q = customQuery !== undefined ? customQuery : query;
+    if (!q.trim()) return;
 
     setLoading(true);
     setHasSearched(true);
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=15`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&limit=20`);
       if (res.ok) {
         const data = await res.json();
         setResults(data.results || []);
@@ -59,10 +62,56 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
     }
   }
 
+  function handleQuickSearch(sample: string) {
+    setQuery(sample);
+    handleSearch(undefined, sample);
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  // Filter & sort results
+  const filteredResults = results
+    .filter((r) => {
+      if (filterType === "all") return true;
+      return r.source_type?.toLowerCase() === filterType.toLowerCase();
+    })
+    .sort((a, b) => {
+      if (sortBy === "timeline") {
+        return a.start_sec - b.start_sec;
+      }
+      return (b.score || 0) - (a.score || 0);
+    });
+
+  // Highlight query keywords in matched snippet
+  function renderHighlightedText(text: string, q: string) {
+    if (!q.trim()) return text;
+    const words = q
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+    if (!words.length) return text;
+
+    const regex = new RegExp(`(${words.join("|")})`, "gi");
+    const parts = text.split(regex);
+
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark
+          key={i}
+          className="bg-[var(--accent)]/20 text-[var(--text-primary)] font-semibold rounded px-0.5"
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
   }
 
   return (
@@ -133,13 +182,13 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
       </header>
 
       {/* Main Search View */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-10 space-y-8">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-10 space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
             Semantic Search
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            Search natural language queries across all your transcripts and jump to the exact moment.
+            Search natural language concepts, quotes, or questions across all transcripts and jump to exact timestamps.
           </p>
         </div>
 
@@ -147,10 +196,10 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
         <form onSubmit={handleSearch} className="relative">
           <input
             type="text"
-            placeholder="Type a concept, quote, or question (e.g. 'gradient descent optimization')..."
+            placeholder="Type a concept, question, or quote (e.g. 'how backpropagation computes loss gradients')..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-4 pl-12 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] shadow-md focus:border-[var(--accent)] focus:outline-none transition-all"
+            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-4 pl-12 pr-28 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] shadow-md focus:border-[var(--accent)] focus:outline-none transition-all"
             autoFocus
           />
           <svg
@@ -165,6 +214,22 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
+
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setResults([]);
+                setHasSearched(false);
+              }}
+              className="absolute right-24 top-4 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] px-2"
+              title="Clear search"
+            >
+              &times;
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={loading || !query.trim()}
@@ -174,15 +239,54 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
           </button>
         </form>
 
-        {/* Results Header */}
+        {/* Filter Chips & Sorting (when results exist) */}
+        {hasSearched && results.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            {/* Source Type Filter Chips */}
+            <div className="flex items-center gap-1.5">
+              {[
+                { id: "all", label: "All Sources" },
+                { id: "youtube", label: "YouTube" },
+                { id: "video", label: "Video" },
+                { id: "audio", label: "Audio" },
+                { id: "text", label: "Text" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterType(f.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                    filterType === f.id
+                      ? "bg-[var(--accent)] text-white shadow-sm"
+                      : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span>Sort:</span>
+              <button
+                onClick={() => setSortBy(sortBy === "relevance" ? "timeline" : "relevance")}
+                className="font-mono text-[var(--text-primary)] hover:text-[var(--accent)] font-semibold underline"
+              >
+                {sortBy === "relevance" ? "Best Match" : "Chronological"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Results Header Status */}
         {hasSearched && (
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>
-              Found <strong className="text-[var(--text-primary)]">{results.length}</strong> matching moments
+              Showing <strong className="text-[var(--text-primary)]">{filteredResults.length}</strong> matching moments
             </span>
             {mode && (
-              <span className="capitalize px-2 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] font-medium border border-[var(--accent)]/20">
-                {mode === "semantic" ? "AI Semantic Vectors" : "Keyword Fallback"}
+              <span className="capitalize px-2.5 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] font-medium border border-[var(--accent)]/20 text-[11px]">
+                {mode === "semantic" ? "AI Vector Search" : "Keyword Fallback"}
               </span>
             )}
           </div>
@@ -193,9 +297,9 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
           <div className="py-20 flex justify-center items-center">
             <span className="spinner" />
           </div>
-        ) : results.length > 0 ? (
+        ) : filteredResults.length > 0 ? (
           <div className="space-y-4 fade-in">
-            {results.map((res, idx) => (
+            {filteredResults.map((res, idx) => (
               <Link
                 key={idx}
                 href={`/item/${res.item_id}?t=${Math.floor(res.start_sec)}`}
@@ -221,7 +325,7 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
                 </div>
 
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed line-clamp-3">
-                  &ldquo;{res.text}&rdquo;
+                  &ldquo;{renderHighlightedText(res.text, query)}&rdquo;
                 </p>
 
                 {res.score !== undefined && res.score > 0 && (
@@ -232,7 +336,7 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
                         style={{ width: `${Math.min(Math.round(res.score * 100), 100)}%` }}
                       />
                     </div>
-                    <span>{Math.round(res.score * 100)}% relevance</span>
+                    <span>{Math.round(res.score * 100)}% match</span>
                   </div>
                 )}
               </Link>
@@ -242,7 +346,7 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
           <div className="text-center py-16 glass-card rounded-2xl border border-[var(--border-subtle)]">
             <p className="text-sm text-[var(--text-secondary)]">No matching moments found.</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Try rephrasing or searching for related terms.
+              Try broader keywords or browse your items in Library.
             </p>
           </div>
         ) : (
@@ -254,13 +358,11 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
               EchoNotes uses vector embeddings to understand the meaning behind your search queries, returning the exact second a topic is discussed.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
-              {["neural networks", "gradient descent", "backpropagation", "transformers self-attention"].map(
+              {["neural networks", "gradient descent", "backpropagation", "transformers self-attention", "activation functions"].map(
                 (sample) => (
                   <button
                     key={sample}
-                    onClick={() => {
-                      setQuery(sample);
-                    }}
+                    onClick={() => handleQuickSearch(sample)}
                     className="px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] transition-all font-mono"
                   >
                     &ldquo;{sample}&rdquo;
