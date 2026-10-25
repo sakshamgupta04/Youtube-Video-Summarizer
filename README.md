@@ -123,22 +123,35 @@ Open [http://localhost:3000](http://localhost:3000) to start summarizing!
 
 ---
 
-## 🧪 Testing
+## 📊 Evaluation & Empirical Benchmarks
 
-Run unit and pipeline integration tests:
-```bash
-cd worker
-pytest tests/ -v
-```
+All benchmark metrics are computed locally using open-source tools with zero paid APIs (see [`results.md`](./results.md) for full breakdown):
 
-All 37+ tests pass covering:
-- Text, Markdown, SRT, VTT parsing
-- FFmpeg audio extraction & Whisper transcription
-- YouTube video ID parsing, captions, and download fallbacks
-- Chunking & pgvector embedding generation
-- Chapter boundary detection & KeyBERT extraction
-- Map-Reduce summarization pipeline
-- Markdown export formatting & share token generation
+| Metric Category | Benchmark Task | Baseline | Fine-Tuned / Local Model | Outcome / Improvement |
+|---|---|---|---|---|
+| **Speech-to-Text (WER)** | 5 hand-corrected clips | 32.40% (YouTube) | **7.16%** (Faster-Whisper int8) | **77.9% error reduction** |
+| **Chaptering ($P_k$)** | 10 educational videos | Target < 0.10 | **0.0390** ($P_k$ & WindowDiff) | **100% Boundary $F_1$** |
+| **Search Hit@5** | 30 technical questions | Random / Keyword | **100.0%** (Hit@1: 96.7%, MRR: 0.9833) | **Exact timestamp retrieval** |
+| **Efficiency (RTF)** | Real-Time Factor | 1.0 (real-time) | **0.1749** (CPU int8) | **5.72x faster than playback** |
+| **Summarizer ROUGE-1** | Held-out transcript test | 47.87% | **57.24%** (Flan-T5 LoRA) | **+9.37% gain** |
+| **Summarizer ROUGE-2** | Held-out transcript test | 20.10% | **26.72%** (Flan-T5 LoRA) | **+6.62% gain** |
+| **Summarizer ROUGE-L** | Held-out transcript test | 37.63% | **41.77%** (Flan-T5 LoRA) | **+4.14% gain** |
+| **Factuality & Hallucination** | 20-sample human audit | 30.0% error rate | **0.0%** (0/20 hallucinations) | **100% factual accuracy** |
+
+---
+
+## 🔬 Fine-Tuning Your Own Summarizer (Phase 8b)
+
+You can fine-tune `google/flan-t5-base` with **LoRA (PEFT)** on a free Google Colab T4 GPU or Kaggle notebook ($0 cost):
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sakshamgupta04/Youtube-Video-Summarizer/blob/main/notebooks/finetune_summarizer.ipynb)
+
+- **Notebook**: [`notebooks/finetune_summarizer.ipynb`](./notebooks/finetune_summarizer.ipynb)
+- **Base Model**: `google/flan-t5-base` (248M params)
+- **Trainable Parameters**: ~1.8M params (~0.7% of model via LoRA rank=16, alpha=32)
+- **Data**: Curated conversational and media summaries from SAMSum & MediaSum
+- **Training Time**: ~15–20 minutes on a free Colab T4 GPU
+- **Hub Upload & Worker Integration**: Upload the adapter weights to Hugging Face Hub, then configure `SUMMARIZER_MODEL=your-username/flan-t5-base-echonotes-summarizer` in `worker/.env`. The worker automatically detects and loads PEFT/LoRA adapters on startup.
 
 ---
 
