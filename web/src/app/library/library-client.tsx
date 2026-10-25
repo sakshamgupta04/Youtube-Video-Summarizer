@@ -65,7 +65,7 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
     e.stopPropagation();
     e.preventDefault();
 
-    if (!confirm("Are you sure you want to delete this item? This will remove its transcript, chapters, and embeddings.")) {
+    if (!confirm("Are you sure you want to delete this item? This will permanently remove its media file, transcript, chapters, and embeddings.")) {
       return;
     }
 
@@ -73,7 +73,14 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
     try {
       // Optimistic update
       setItems((prev) => prev.filter((item) => item.id !== id));
-      await supabase.from("items").delete().eq("id", id);
+      const res = await fetch(`/api/items/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to delete item");
+      }
     } catch (err) {
       console.error("Error deleting item:", err);
       fetchItems();

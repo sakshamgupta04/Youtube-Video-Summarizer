@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface Segment {
@@ -50,9 +50,11 @@ declare global {
 }
 
 export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
@@ -413,6 +415,34 @@ ${transcriptText || "No transcript available."}
     URL.revokeObjectURL(url);
   }
 
+  async function handleDeleteItem() {
+    if (
+      !confirm(
+        "Are you sure you want to delete this item? This will permanently remove its media file from storage, transcript, chapters, and embeddings."
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/items/${item.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to delete item");
+      }
+
+      router.push("/library");
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete item");
+      setIsDeleting(false);
+    }
+  }
+
   // Determine active chapter based on currentTime
   const currentChapterIndex = (item.chapters || []).findIndex(
     (ch) => currentTime >= ch.start && currentTime <= ch.end
@@ -451,6 +481,21 @@ ${transcriptText || "No transcript available."}
             </svg>
             <span className="hidden sm:inline">Export .md</span>
           </button>
+
+          {/* Delete Button */}
+          {!item.id.startsWith("sample-") && (
+            <button
+              onClick={handleDeleteItem}
+              disabled={isDeleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-all"
+              title="Delete item and reclaim storage"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span className="hidden sm:inline">{isDeleting ? "Deleting..." : "Delete"}</span>
+            </button>
+          )}
 
           {/* Share Button */}
           <button
