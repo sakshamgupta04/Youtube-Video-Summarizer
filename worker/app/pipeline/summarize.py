@@ -46,8 +46,23 @@ def load_summarizer_model() -> Tuple[Any, Any, Any]:
         model_name = settings.summarizer_model
         logger.info(f"Loading summarizer model '{model_name}'...")
 
-        _tokenizer = AutoTokenizer.from_pretrained(model_name)
-        _model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        try:
+            from peft import PeftConfig, PeftModel
+            try:
+                peft_config = PeftConfig.from_pretrained(model_name)
+                base_model_name = peft_config.base_model_name_or_path or "google/flan-t5-base"
+                logger.info(f"Detected PEFT adapter. Loading base model '{base_model_name}'...")
+                _tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+                base_model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
+                _model = PeftModel.from_pretrained(base_model, model_name)
+                logger.info(f"Loaded PEFT/LoRA adapter '{model_name}'.")
+            except Exception:
+                _tokenizer = AutoTokenizer.from_pretrained(model_name)
+                _model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        except ImportError:
+            _tokenizer = AutoTokenizer.from_pretrained(model_name)
+            _model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
         _device = get_device()
         _model.to(_device)
         _model.eval()
