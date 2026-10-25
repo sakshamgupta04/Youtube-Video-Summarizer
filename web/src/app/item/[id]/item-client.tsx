@@ -183,35 +183,57 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   useEffect(() => {
     if (item.source_type !== "youtube" || !item.video_id) return;
 
-    function initYT() {
-      if (!window.YT || !window.YT.Player) return;
+    let isSubscribed = true;
 
-      ytPlayerRef.current = new window.YT.Player("youtube-player", {
-        videoId: item.video_id,
-        playerVars: {
-          autoplay: 0,
-          playsinline: 1,
-          rel: 0,
-          modestbranding: 1,
-        },
-        events: {
-          onReady: (event: any) => {
-            if (initialTime > 0) {
-              event.target.seekTo(initialTime, true);
-            }
+    function initYT() {
+      if (!isSubscribed) return;
+      if (!window.YT || !window.YT.Player) return;
+      const container = document.getElementById("youtube-player");
+      if (!container) return;
+
+      // Clean up previous instance if already mounted
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.destroy === "function") {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch {}
+        ytPlayerRef.current = null;
+      }
+
+      try {
+        ytPlayerRef.current = new window.YT.Player("youtube-player", {
+          videoId: item.video_id,
+          playerVars: {
+            autoplay: 0,
+            playsinline: 1,
+            rel: 0,
+            modestbranding: 1,
+            origin: typeof window !== "undefined" ? window.location.origin : undefined,
+            enablejsapi: 1,
           },
-          onStateChange: (event: any) => {
-            setIsPlaying(event.data === 1);
+          events: {
+            onReady: (event: any) => {
+              if (initialTime > 0) {
+                event.target.seekTo(initialTime, true);
+              }
+            },
+            onStateChange: (event: any) => {
+              setIsPlaying(event.data === 1);
+            },
           },
-        },
-      });
+        });
+      } catch (err) {
+        console.warn("YouTube player init error:", err);
+      }
     }
 
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName("script")[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    if (!window.YT || !window.YT.Player) {
+      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (!existingScript) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName("script")[0];
+        firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      }
       window.onYouTubeIframeAPIReady = initYT;
     } else {
       initYT();
@@ -232,11 +254,13 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
     }, 250);
 
     return () => {
+      isSubscribed = false;
       clearInterval(interval);
       if (ytPlayerRef.current && typeof ytPlayerRef.current.destroy === "function") {
         try {
           ytPlayerRef.current.destroy();
         } catch {}
+        ytPlayerRef.current = null;
       }
     };
   }, [item.source_type, item.video_id, initialTime]);

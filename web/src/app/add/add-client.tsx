@@ -81,19 +81,33 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     setErrorMessage(null);
 
     try {
-      const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const storagePath = `${userId}/${Date.now()}_${sanitizedName}`;
       const sourceType = getSourceType(selectedFile.name);
 
-      const { error: uploadError } = await supabase.storage
-        .from("uploads")
-        .upload(storagePath, selectedFile, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      // 1. Get signed upload URL via server-side admin client (bypasses storage RLS)
+      const signRes = await fetch("/api/upload/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: selectedFile.name }),
+      });
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
+      if (!signRes.ok) {
+        const errData = await signRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to initialize upload.");
+      }
+
+      const { storagePath, signedUrl } = await signRes.json();
+
+      // 2. Upload file directly to Supabase storage signed URL using standard PUT
+      const uploadRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": selectedFile.type || "application/octet-stream",
+        },
+        body: selectedFile,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Upload failed with status ${uploadRes.status}`);
       }
 
       const itemTitle = uploadTitle.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
