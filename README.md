@@ -114,6 +114,22 @@ You can fine-tune `google/flan-t5-base` with **LoRA (PEFT)** on a free Google Co
 
 ---
 
+## 🛡️ Fault Tolerance & Fallback Table (Section 7)
+
+EchoNotes is engineered to be resilient against real-world network failures, cloud timeouts, and format mismatches. Every critical component features an automated, graceful fallback path:
+
+| What breaks | What happens | Implementation Details |
+|---|---|---|
+| **yt-dlp fails** | Message asks the user to upload the file | Caught in `worker/app/ingest/youtube.py`; records friendly prompt: `"Couldn't fetch this video. Please upload the file instead."` |
+| **No captions** | Whisper path | `try_fetch_captions()` falls back cleanly to local `faster-whisper` (`base`, `int8`) audio transcription |
+| **Video too long** | Friendly error with the 90-minute limit | Duration metadata checked before download; rejects media exceeding 5,400 seconds (90 min) with friendly cap error |
+| **Worker is down or asleep** | Item stays queued; UI shows "waiting for worker" | Items remain safely queued in Supabase Postgres. Both Library and Item detail views show an active `"waiting for worker"` status indicator |
+| **Embedding service down** | Search falls back to keyword search | In `web/src/app/api/search/route.ts`, if `/embed` is unreachable or times out, query instantly degrades to Postgres `ilike` keyword search (`mode: "keyword"`) |
+| **Summary model fails** | Show key points and chapters only; mark summary unavailable | Summarizer execution is isolated with `try...except`; all generated chapters and key takeaways are preserved, while summary is cleanly marked `"Summary unavailable."` |
+| **Spotify link pasted** | Message: "Spotify isn't supported yet. Upload the file, or paste the YouTube link." | Intercepted in both Web client form and Worker pipeline: `"Spotify isn't supported yet. Upload the file, or paste the YouTube link."` |
+
+---
+
 ## ⚠️ Known Limits & Edge Cases
 
 1. **Spotify Podcasts Not Supported Directly**:
