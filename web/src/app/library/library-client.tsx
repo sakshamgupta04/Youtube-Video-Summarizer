@@ -28,6 +28,10 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Filter & search state
+  const [searchFilter, setSearchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "done" | "processing" | "failed">("all");
+
   async function fetchItems() {
     const { data, error } = await supabase
       .from("items")
@@ -85,8 +89,27 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
+  // Calculate stats
+  const totalCompleted = items.filter((i) => i.status === "done").length;
+  const totalSeconds = items.reduce((acc, i) => acc + (i.duration_sec || 0), 0);
+  const totalMinutes = Math.round(totalSeconds / 60);
+
+  // Filtered items
+  const filteredItems = items.filter((item) => {
+    const matchesSearch = !searchFilter.trim() ||
+      (item.title || "untitled item").toLowerCase().includes(searchFilter.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (statusFilter === "all") return true;
+    if (statusFilter === "done") return item.status === "done";
+    if (statusFilter === "failed") return item.status === "failed";
+    if (statusFilter === "processing") return item.status !== "done" && item.status !== "failed";
+    return true;
+  });
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
+    <div className="flex-1 flex flex-col min-h-screen bg-[var(--bg-primary)]">
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]/50 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-6">
@@ -163,8 +186,8 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Your Library</h1>
             <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -182,6 +205,74 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
             Search Library
           </Link>
         </div>
+
+        {/* Library Stats Banner */}
+        {items.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 p-4 rounded-xl glass-card border border-[var(--border-subtle)]">
+            <div className="text-center sm:text-left sm:pl-2">
+              <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block">Total Items</span>
+              <span className="text-lg font-bold text-[var(--text-primary)]">{items.length}</span>
+            </div>
+            <div className="text-center border-x border-[var(--border-subtle)]">
+              <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block">Completed</span>
+              <span className="text-lg font-bold text-emerald-400">{totalCompleted}</span>
+            </div>
+            <div className="text-center sm:text-right sm:pr-2">
+              <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block">Audio/Video</span>
+              <span className="text-lg font-bold text-[var(--accent)] font-mono">
+                {totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : `${totalMinutes} min`}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Filter Controls (Search + Status Chips) */}
+        {items.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              {[
+                { id: "all", label: "All" },
+                { id: "done", label: "Done" },
+                { id: "processing", label: "Processing" },
+                { id: "failed", label: "Failed" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setStatusFilter(f.id as any)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    statusFilter === f.id
+                      ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
+                      : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Filter by title..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 pl-8 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+              />
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="absolute left-2.5 top-2.5 text-[var(--text-muted)]"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center py-24">
@@ -221,9 +312,13 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
               Add Your First Item
             </Link>
           </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="glass-card p-10 text-center rounded-xl border border-[var(--border-subtle)]">
+            <p className="text-xs text-[var(--text-muted)]">No items match your filter.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const isDone = item.status === "done";
               const isFailed = item.status === "failed";
               const isInProgress = !isDone && !isFailed;
