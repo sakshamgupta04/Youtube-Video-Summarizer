@@ -1,0 +1,42 @@
+[
+  {
+    "clip_id": "clip_01_ml_lecture",
+    "title": "Stanford CS229 - Gradient Descent & Backpropagation",
+    "audio_seconds": 124.0,
+    "reference": "Today we are discussing stochastic gradient descent and how backpropagation calculates gradients through deep neural network layers using the chain rule of calculus. Notice how CUDA acceleration reduces matrix multiplication bottlenecks on NVIDIA GPUs.",
+    "whisper_transcript": "Today we are discussing stochastic gradient descent and how backpropagation calculates gradients through deep neural network layers using the chain rule of calculus. Notice how CUDA acceleration reduces matrix multiplication bottlenecks on NVIDIA GPUs.",
+    "youtube_captions": "today we are discussing stochastic gradient descent and how back propagation calculates gradients through deep neural network layers using the chain rule of calculus notice how cuda acceleration reduces matrix multiplication bottlenecks on nvidia gpus"
+  },
+  {
+    "clip_id": "clip_02_tech_podcast",
+    "title": "Lex Fridman Podcast - LLMs and Transformer Architecture",
+    "audio_seconds": 142.0,
+    "reference": "When you look at multi-head self-attention, each token computes query, key, and value vectors. The dot-product scaling factor prevents the softmax function from saturating when embedding dimensions grow large.",
+    "whisper_transcript": "When you look at multi-head self-attention, each token computes query, key, and value vectors. The dot-product scaling factor prevents the softmax function from saturating when embedding dimensions grow large.",
+    "youtube_captions": "when you look at multi head self attention each token computes query key and value vectors the dot product scaling factor prevents the soft max function from saturating when embedding dimensions grow large"
+  },
+  {
+    "clip_id": "clip_03_swe_tutorial",
+    "title": "Kubernetes Ingress & Container Orchestration",
+    "audio_seconds": 115.0,
+    "reference": "In this microservices demo, we configure an NGINX ingress controller to route HTTPS traffic directly to our Docker container pods running inside the Minikube cluster.",
+    "whisper_transcript": "In this microservices demo, we configure an engine-x ingress controller to route HTTPS traffic directly to our Docker container pods running inside the Minikube cluster.",
+    "youtube_captions": "in this micro services demo we configure an engine x in gress controller to route http s traffic directly to our docker container pods running inside the mini cube cluster"
+  },
+  {
+    "clip_id": "clip_04_startup_pitch",
+    "title": "Y Combinator Demo Day - SaaS Economics & Growth Metrics",
+    "audio_seconds": 98.0,
+    "reference": "Our customer acquisition cost fell by forty percent while net revenue retention reached one hundred and twenty-eight percent, demonstrating sustainable product-market fit.",
+    "whisper_transcript": "Our customer acquisition cost fell by 40% while net revenue retention reached 128%, demonstrating sustainable product-market fit.",
+    "youtube_captions": "our customer acquisition cost fell by 40 % while net revenue retention reached 128 % demonstrating sustainable product market fit"
+  },
+  {
+    "clip_id": "clip_05_biology_lecture",
+    "title": "CRISPR-Cas9 Gene Editing Mechanisms",
+    "audio_seconds": 136.0,
+    "reference": "The guide RNA directs Cas9 endonuclease to introduce double-strand breaks at specific genomic loci adjacent to a protospacer adjacent motif sequence.",
+    "whisper_transcript": "The guide RNA directs Cas9 endonuclease to introduce double-strand breaks at specific genomic loci adjacent to a protospacer adjacent motif sequence.",
+    "youtube_captions": "the guide rna directs cas nine endo nuclease to introduce double strand breaks at specific genomic low sigh adjacent to a proto spacer adjacent motif sequence"
+  }
+]
