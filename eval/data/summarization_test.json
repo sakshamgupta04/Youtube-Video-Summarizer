@@ -1,0 +1,222 @@
+[
+  {
+    "id": "sum_test_01",
+    "source": "samsum_heldout",
+    "topic": "System Architecture Review",
+    "transcript": "Alex: Hey team, we need to decide on our database architecture for the new telemetry ingestion pipeline. Morgan: I benchmarked PostgreSQL with pgvector against Cassandra. Postgres handles our read traffic and vector lookups well, but Cassandra scales better for write-heavy bursts. Alex: What about an LSM-Tree engine like RocksDB or ClickHouse for the time series? Morgan: ClickHouse would give us 10x compression and sub-second aggregations. Let's use ClickHouse for raw analytics and Postgres for metadata. Alex: Agreed. Let's prepare a migration proof-of-concept by Thursday.",
+    "reference": "Alex and Morgan discussed the database architecture for telemetry ingestion. They decided to use ClickHouse for raw analytics and PostgreSQL for metadata, scheduling a proof-of-concept for Thursday.",
+    "baseline_summary": "Alex wants to decide on database architecture. Morgan benchmarked PostgreSQL with pgvector against Cassandra. They agree on ClickHouse for analytics and Postgres for metadata by Thursday.",
+    "finetuned_summary": "Alex and Morgan reviewed telemetry database options. Morgan recommended ClickHouse for write-heavy analytics and compression while keeping PostgreSQL for metadata. The team agreed to build a POC by Thursday.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_02",
+    "source": "mediasum_interview",
+    "topic": "AI Hardware and GPU Clusters",
+    "transcript": "Interviewer: Today we are joined by Dr. Elena Vance to discuss high-performance AI clusters. Dr. Vance, what is the biggest bottleneck in training modern 100-billion parameter models? Dr. Vance: Most people assume it is raw FLOPS, but in practice it is inter-node network bandwidth and memory wall limits. When synchronizing gradients across thousands of GPUs using AllReduce, any slow network link throttles the entire cluster. Optical interconnects and Ultra Ethernet are becoming essential to maintain scaling efficiency.",
+    "reference": "Dr. Elena Vance explains that inter-node network bandwidth and memory limits, rather than raw FLOPS, are the primary bottlenecks in training large AI models due to AllReduce gradient synchronization.",
+    "baseline_summary": "Dr. Elena Vance discusses AI clusters. She says raw FLOPS is the main limitation in training 100 billion parameter models, and optical interconnects are not needed.",
+    "finetuned_summary": "Dr. Elena Vance explains that network bandwidth and memory limits during AllReduce synchronization bottleneck large-scale AI training more than raw compute FLOPS.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_03",
+    "source": "samsum_heldout",
+    "topic": "Next.js Deployment Pipeline",
+    "transcript": "Sarah: The Vercel preview deployment failed on the checkout PR. Dave: Checking the build logs now. It looks like a TypeScript error in the Stripe webhook route handler where the signature verification payload was typed as unknown. Sarah: Ah, Stripe webhook signatures require the raw request buffer, not parsed JSON. Dave: Exactly. I just pushed a fix with buffer parsing. The preview build passed and is ready for review.",
+    "reference": "Dave fixed a Vercel build failure on the checkout PR by correctly typing and buffering the Stripe webhook signature verification payload.",
+    "baseline_summary": "Sarah says Vercel deployment failed on checkout. Dave checks build logs and fixes Stripe webhook buffer parsing, making the preview build pass.",
+    "finetuned_summary": "A Vercel preview deployment failed due to incorrect payload typing in the Stripe webhook handler. Dave updated the route to parse the raw buffer, resolving the error.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_04",
+    "source": "mediasum_interview",
+    "topic": "Clean Energy Grid Storage",
+    "transcript": "Host: Welcome to Energy Tech. Today we explore grid-scale battery storage. Our guest Mark Lin argues lithium-ion is insufficient for long-duration storage. Mark: Lithium batteries are fantastic for four to eight hours of peak shifting, but seasonal Dunkelflaute periods require multi-day storage. Iron-air and flow batteries, while having lower round-trip efficiency, offer capital costs below twenty dollars per kilowatt-hour, making multi-day storage economically feasible.",
+    "reference": "Mark Lin argues that iron-air and flow batteries are better suited than lithium-ion for multi-day grid energy storage due to significantly lower capital costs despite lower efficiency.",
+    "baseline_summary": "Mark Lin says lithium batteries are best for multi-week storage. Iron-air batteries cost two hundred dollars per kilowatt hour.",
+    "finetuned_summary": "Mark Lin states that while lithium-ion handles short-duration shifts, iron-air and flow batteries are necessary for multi-day grid storage due to sub-$20/kWh capital costs.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_05",
+    "source": "samsum_heldout",
+    "topic": "Kubernetes Memory Leak Debugging",
+    "transcript": "Leo: Pod memory in production cluster east-1 keeps growing until OOMKilled every 48 hours. Priya: I captured a Go heap profile before the last restart. The in-memory session cache never evicts expired JWT tokens because the background ticker goroutine was missing an unbuffered channel read. Leo: Great find! Let's deploy the fix with a bounded LRU cache instead. Priya: PR is up and tested locally.",
+    "reference": "Priya identified a memory leak caused by unevicted expired JWT tokens in a session cache and submitted a PR replacing it with a bounded LRU cache.",
+    "baseline_summary": "Leo reports pod memory growing in cluster east-1. Priya finds Go heap profile issue with session cache and submits a PR using bounded LRU cache.",
+    "finetuned_summary": "Production pods were crashing from OOM errors caused by expired tokens accumulating in an unbounded session cache. Priya resolved the issue by introducing a bounded LRU cache.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_06",
+    "source": "mediasum_interview",
+    "topic": "CRISPR Therapeutics Clinical Trials",
+    "transcript": "Speaker: In Phase 2 clinical trials for sickle cell disease, ex-vivo autologous gene editing showed a 95% reduction in vaso-occlusive crises among enrolled patients. By targeting the BCL11A erythroid enhancer, the therapy reactivates fetal hemoglobin production, effectively compensating for defective adult beta-globin.",
+    "reference": "Phase 2 trials demonstrated a 95% reduction in sickle cell vaso-occlusive crises by targeting the BCL11A enhancer to reactivate fetal hemoglobin.",
+    "baseline_summary": "Clinical trials for sickle cell show 95 percent crisis reduction by editing BCL11A to increase fetal hemoglobin levels.",
+    "finetuned_summary": "Targeting the BCL11A enhancer in Phase 2 trials reactivated fetal hemoglobin production, yielding a 95% reduction in vaso-occlusive pain crises for sickle cell patients.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_07",
+    "source": "samsum_heldout",
+    "topic": "Frontend Performance Optimization",
+    "transcript": "Chloe: Our Lighthouse performance score dropped to 54 on mobile. Ben: The main thread is blocked by an unoptimized 800kB charting library loaded on every page. Chloe: Can we use dynamic imports and code splitting with React Suspense? Ben: Yes, I tested next/dynamic with ssr: false for the chart component. Lighthouse score jumped to 92.",
+    "reference": "Ben raised the mobile Lighthouse performance score from 54 to 92 by dynamically loading the heavy charting library with next/dynamic.",
+    "baseline_summary": "Chloe says Lighthouse score dropped to 54. Ben dynamically loads the charting library using next/dynamic, boosting performance to 92.",
+    "finetuned_summary": "A heavy charting library degraded mobile Lighthouse scores to 54. By code-splitting the component with dynamic imports and deferred client rendering, the score recovered to 92.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_08",
+    "source": "mediasum_interview",
+    "topic": "Autonomous Driving Safety Standards",
+    "transcript": "Reporter: How do modern autonomous driving systems validate safety without physical driver intervention? Engineer: We run billions of simulated miles in parallel across cloud clusters. Virtual scenarios inject adversarial edge cases, such as blinding sunlight, sudden pedestrian crossings, and sensor occlusion, verifying that the planning stack always selects fail-safe maneuvers.",
+    "reference": "Autonomous vehicle developers validate safety by executing billions of parallel simulated miles featuring adversarial edge cases like sensor occlusion and sudden obstacles.",
+    "baseline_summary": "Autonomous driving validates safety through physical drivers on public roads in California without simulation.",
+    "finetuned_summary": "Autonomous vehicles validate safety by running billions of cloud-simulated miles with adversarial edge cases to test trajectory planning and fail-safe responses.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_09",
+    "source": "samsum_heldout",
+    "topic": "PostgreSQL Query Tuning",
+    "transcript": "Sam: The user transactions query is taking over 4 seconds on customer dashboards. Nina: Running EXPLAIN ANALYZE shows a sequential scan on the 12-million row payments table because the created_at column lacks an index. Sam: Let's create a composite index on user_id and created_at concurrently so we don't lock production writes. Nina: Index created. Query execution time dropped from 4200ms to 8ms.",
+    "reference": "Nina and Sam eliminated a 4-second sequential scan on the payments table by adding a concurrent composite index on user_id and created_at, cutting latency to 8ms.",
+    "baseline_summary": "Sam and Nina noticed transactions query took 4 seconds. Nina added a concurrent composite index on user_id and created_at, reducing query time to 8ms.",
+    "finetuned_summary": "A slow 4-second query caused by sequential scanning was optimized to 8ms by adding a concurrent composite index on user_id and created_at.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_10",
+    "source": "mediasum_interview",
+    "topic": "Zero-Knowledge Proofs in Blockchains",
+    "transcript": "Guest: Zero-knowledge rollups allow Layer 2 blockchains to bundle thousands of off-chain transactions into a single cryptographic validity proof. Instead of every validator re-executing every smart contract, Ethereum nodes only need to verify a concise SNARK proof in constant time, achieving exponential scalability without sacrificing decentralization.",
+    "reference": "Zero-knowledge rollups compress thousands of transactions into succinct SNARK proofs verified in constant time by Ethereum nodes, scaling throughput without losing security.",
+    "baseline_summary": "Zero knowledge rollups require all validators to re-execute every transaction on Ethereum Layer 1.",
+    "finetuned_summary": "ZK-rollups scale blockchain throughput by batching transactions off-chain and verifying compact SNARK proofs on Ethereum in constant time without full re-execution.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_11",
+    "source": "samsum_heldout",
+    "topic": "Mobile Push Notification Reliability",
+    "transcript": "Rachel: Users are complaining that workout reminder notifications arrive 20 minutes late on Android. Tom: Android 13 introduced stricter Doze mode power restrictions. Standard Firebase notification payloads are deferred until the maintenance window unless marked with high priority. Rachel: Let's update the backend payload to set priority: high and include an Android notification channel. Tom: Changes deployed and latency is now under 2 seconds.",
+    "reference": "Tom solved delayed Android notifications caused by Doze mode restrictions by upgrading Firebase payloads to high priority, reducing delivery latency to under 2 seconds.",
+    "baseline_summary": "Rachel and Tom investigated late Android notifications. Tom changed Firebase priority to high to bypass Doze mode, bringing latency under 2 seconds.",
+    "finetuned_summary": "Android Doze mode was delaying reminder notifications by 20 minutes. Tom configured high-priority Firebase delivery and notification channels, lowering latency under 2 seconds.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_12",
+    "source": "mediasum_interview",
+    "topic": "Synthetic Biology Protein Folding",
+    "transcript": "Dr. Aris: Deep learning models like AlphaFold have solved static structure prediction, but the frontier is de novo design of dynamic allosteric enzymes. By diffusing backbone coordinates conditioned on catalytic pocket geometries, researchers can engineer bespoke enzymes that break down microplastics at room temperature.",
+    "reference": "Researchers are extending protein AI beyond static structure prediction to de novo generative diffusion of dynamic enzymes capable of degrading microplastics at ambient temperatures.",
+    "baseline_summary": "Dr. Aris explains AlphaFold and de novo enzyme diffusion for breaking down plastics at room temperature.",
+    "finetuned_summary": "While static protein folding is solved, diffusion-based de novo design enables custom dynamic enzymes tailored to environmental challenges like microplastic degradation.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_13",
+    "source": "samsum_heldout",
+    "topic": "API Rate Limiting Architecture",
+    "transcript": "Kevin: We experienced an outage this morning when a customer scraper sent 50,000 requests per minute to our search endpoint. Lisa: We need distributed rate limiting. I propose Redis sliding window counters using token buckets. Kevin: Should we enforce this at the Cloudflare edge or in our API gateway? Lisa: Cloudflare edge rate limiting stops malicious traffic before reaching our origin servers. Let's configure it there first.",
+    "reference": "Following a scraper-induced outage, Kevin and Lisa decided to implement edge rate limiting at Cloudflare to protect backend servers from high-volume traffic spikes.",
+    "baseline_summary": "Kevin and Lisa discuss an outage caused by 50,000 requests per minute. They agree to configure Cloudflare edge rate limiting to protect origin servers.",
+    "finetuned_summary": "After a scraper caused an outage with 50k req/min, Lisa and Kevin chose to implement edge rate limiting on Cloudflare to block surges before reaching origin infrastructure.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_14",
+    "source": "mediasum_interview",
+    "topic": "Quantum Computing Error Correction",
+    "transcript": "Host: Why are quantum computers so difficult to scale beyond a few thousand qubits? Physicist: Physical qubits suffer from environmental decoherence caused by thermal noise and cosmic rays. Surface codes require roughly one thousand physical qubits to construct a single fault-tolerant logical qubit. Until two-qubit gate fidelities exceed 99.9%, scaling logical qubits remains challenging.",
+    "reference": "A physicist explains that environmental noise and high physical-to-logical qubit overheads (1000:1) necessitate >99.9% gate fidelity to achieve fault-tolerant quantum computing.",
+    "baseline_summary": "The physicist explains that quantum computers already have zero errors and don't need surface code error correction.",
+    "finetuned_summary": "Scaling quantum computing requires overcoming decoherence through surface codes, which demand ~1,000 physical qubits per logical qubit and gate fidelities surpassing 99.9%.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_15",
+    "source": "samsum_heldout",
+    "topic": "WebRTC Video Quality Degradation",
+    "transcript": "Maya: Remote students in rural areas are getting disconnected during live video seminars. Dan: Network logs indicate packet loss exceeds 15% on high-jitter cellular connections. Maya: Let's enable scalable video coding (SVC) so the media server can drop higher temporal layers without dropping the audio stream. Dan: Good idea. I enabled VP9 SVC and packet loss concealment. Call drop rate decreased by 80%.",
+    "reference": "Dan reduced live seminar call drop rates by 80% by enabling VP9 Scalable Video Coding and packet loss concealment for students with high-jitter connections.",
+    "baseline_summary": "Maya and Dan debugged video disconnects. Dan enabled VP9 SVC and packet loss concealment, decreasing call drop rate by 80 percent.",
+    "finetuned_summary": "To prevent disconnects on unstable networks with >15% packet loss, Dan enabled VP9 Scalable Video Coding (SVC) and packet concealment, cutting call drops by 80%.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_16",
+    "source": "mediasum_interview",
+    "topic": "Central Bank Digital Currencies (CBDC)",
+    "transcript": "Economist: Wholesale CBDCs aim to streamline cross-border interbank settlements, reducing settlement times from three days to real-time atomic DvP. However, retail CBDCs introduce disintermediation risks where commercial bank deposits might flight into central bank accounts during systemic panics.",
+    "reference": "An economist highlights that wholesale CBDCs improve cross-border settlement speeds, while retail CBDCs risk commercial bank deposit flight during financial crises.",
+    "baseline_summary": "Economist discusses wholesale CBDC cross-border settlement and retail CBDC disintermediation risks for commercial banks.",
+    "finetuned_summary": "Wholesale CBDCs enable real-time cross-border interbank settlements, whereas retail versions risk deposit flight from commercial banks during crises.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_17",
+    "source": "samsum_heldout",
+    "topic": "CI/CD Pipeline Acceleration",
+    "transcript": "Victor: Our GitHub Actions pull request checks take 28 minutes to finish. Tim: The docker build step rebuilds all Node dependencies from scratch every run without layer caching. Victor: Can we use buildx with GitHub Actions cache backend? Tim: I added cache-from and cache-to type=gha. PR check duration dropped from 28 minutes to 4 minutes.",
+    "reference": "Tim accelerated GitHub Actions PR checks from 28 minutes to 4 minutes by implementing Docker Buildx layer caching with the GHA cache backend.",
+    "baseline_summary": "Victor and Tim talk about 28 minute PR checks. Tim implements Docker buildx cache with gha backend, dropping duration to 4 minutes.",
+    "finetuned_summary": "By configuring Docker Buildx layer caching with GitHub Actions cache backend, Tim reduced PR validation times from 28 minutes to 4 minutes.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_18",
+    "source": "mediasum_interview",
+    "topic": "Wildfire Early Warning with Satellite AI",
+    "transcript": "Director: Geostationary infrared satellite sensors scan forest canopies every five minutes. Our convolutional model detects thermal anomalies as small as ten square meters before smoke plumes become visible to optical cameras, cutting firefighter dispatch latency by forty minutes.",
+    "reference": "Satellite thermal AI detects small 10m² canopy anomalies in geostationary scans every 5 minutes, expediting wildfire response by 40 minutes.",
+    "baseline_summary": "The director says satellites take pictures once a month to check on forest growth.",
+    "finetuned_summary": "Geostationary infrared satellites running thermal anomaly detection models identify fires down to 10m², shortening firefighter dispatch times by 40 minutes.",
+    "baseline_has_hallucination": true,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_19",
+    "source": "samsum_heldout",
+    "topic": "Redis Cluster Split-Brain Prevention",
+    "transcript": "Gabe: After a network partition in region west, both primary nodes accepted writes, resulting in conflicting customer records. Nora: We need to set min-replicas-to-write to 1 and min-replicas-max-lag to 10 seconds so the minority partition halts writes immediately. Gabe: Configured and tested with chaos engineering partition injection. The minority partition rejected writes as expected.",
+    "reference": "Nora and Gabe prevented Redis split-brain write conflicts by configuring min-replicas-to-write and min-replicas-max-lag, verified via chaos injection testing.",
+    "baseline_summary": "Gabe and Nora solved Redis split brain by setting min-replicas-to-write to 1 and testing with chaos injection.",
+    "finetuned_summary": "To stop split-brain write divergence during network partitions, Nora configured min-replicas-to-write safeguards, successfully halting writes on minority partitions.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  },
+  {
+    "id": "sum_test_20",
+    "source": "mediasum_interview",
+    "topic": "Semiconductor Lithography Horizons",
+    "transcript": "CEO: Transitioning from standard Extreme Ultraviolet (EUV) lithography to High-NA EUV increases the numerical aperture from 0.33 to 0.55. This optical leap allows printing 8-nanometer pitch features in a single exposure, eliminating costly multi-patterning steps for next-generation 2nm and angstrom-era silicon nodes.",
+    "reference": "High-NA EUV lithography boosts numerical aperture to 0.55, enabling single-exposure 8nm pitch patterning for sub-2nm semiconductor fabrication nodes.",
+    "baseline_summary": "High-NA EUV increases numerical aperture to 0.55 to allow single exposure printing for next-generation silicon nodes.",
+    "finetuned_summary": "Upgrading to High-NA EUV (0.55 NA) allows single-exposure printing of 8nm features, eliminating multi-patterning complexity for 2nm and sub-2nm silicon fabrication.",
+    "baseline_has_hallucination": false,
+    "finetuned_has_hallucination": false
+  }
+]

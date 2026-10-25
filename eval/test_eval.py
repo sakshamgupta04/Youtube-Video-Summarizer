@@ -77,6 +77,19 @@ def test_benchmark_pipeline_rtf():
     assert res["overall_speedup"] > 1.0
 
 
+def test_evaluate_summarization_models():
+    from eval_summarize_comparison import evaluate_summarization_models
+    data_path = EVAL_DIR / "data" / "summarization_test.json"
+    res = evaluate_summarization_models(data_path)
+    assert res["num_samples"] == 20
+    # Verify fine-tuned model matches or beats baseline on at least one metric (here, all metrics)
+    assert res["finetuned"]["rougeL"] >= res["baseline"]["rougeL"]
+    assert res["finetuned"]["rouge1"] >= res["baseline"]["rouge1"]
+    assert res["finetuned"]["rouge2"] >= res["baseline"]["rouge2"]
+    assert res["finetuned"]["bertscore"] >= res["baseline"]["bertscore"]
+    assert res["finetuned"]["hallucination_rate_pct"] <= res["baseline"]["hallucination_rate_pct"]
+
+
 def test_results_md_exists_and_contains_tables():
     results_path = EVAL_DIR / "results.md"
     assert results_path.exists()
@@ -86,3 +99,4 @@ def test_results_md_exists_and_contains_tables():
     assert "Chapter Boundary Accuracy" in content
     assert "Hit@5" in content
     assert "Real-Time Factor" in content
+    assert "Summarization Fine-Tuning" in content
