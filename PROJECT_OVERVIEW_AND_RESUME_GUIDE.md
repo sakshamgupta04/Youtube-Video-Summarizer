@@ -2,6 +2,7 @@
 
 > **Project Name:** EchoNotes – Open-Source Video/Podcast Summarizer & Searchable Timeline  
 > **Author & Developer:** Saksham Gupta  
+> **Live Demo:** [https://youtube-video-summarizer-sage.vercel.app](https://youtube-video-summarizer-sage.vercel.app)  
 > **Repository:** [https://github.com/sakshamgupta04/Youtube-Video-Summarizer](https://github.com/sakshamgupta04/Youtube-Video-Summarizer)  
 > **Total API / Cloud Cost:** **$0.00** (Strictly Free-Tier & Local Open-Source Models)
 

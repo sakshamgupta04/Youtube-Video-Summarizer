@@ -3,12 +3,14 @@
 > **EchoNotes** is a fully local, open-source podcast and lecture summarization platform that transforms long audio, video, and YouTube links into searchable timestamped transcripts, intelligent chapters, key takeaways, and hierarchical summaries—with **$0 in paid AI API costs** and zero cloud subscription fees. Designed with a Next.js 16 frontend, an asynchronous FastAPI worker, and Supabase pgvector, it features interactive video scrubbing, synchronized transcript highlighting, semantic timestamp search, public read-only links, and one-click Markdown notes export.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Deploy with Vercel](https://img.shields.io/badge/Vercel-Live%20Demo-black?logo=vercel)](https://youtube-video-summarizer-sage.vercel.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)](https://fastapi.tiangolo.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E)](https://supabase.com/)
 [![Whisper](https://img.shields.io/badge/Faster--Whisper-int8-orange)](https://github.com/SYSTRAN/faster-whisper)
 [![LoRA](https://img.shields.io/badge/PEFT-LoRA%20Flan--T5-purple)](https://huggingface.co/)
-[![Hugging Face Space](https://img.shields.io/badge/HuggingFace-Spaces%20Docker-yellow)](https://huggingface.co/spaces)
+
+**🚀 Live Web Application:** [https://youtube-video-summarizer-sage.vercel.app](https://youtube-video-summarizer-sage.vercel.app)
 
 ---
 
