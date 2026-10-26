@@ -31,9 +31,12 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes: redirect to /login if not authenticated
+  // Sample demo items (/item/sample-*) are public so recruiters and visitors can test without an account
+  const isSampleItem = request.nextUrl.pathname.startsWith("/item/sample-");
   const isProtected =
-    request.nextUrl.pathname.startsWith("/library") ||
-    request.nextUrl.pathname.startsWith("/item");
+    (request.nextUrl.pathname.startsWith("/library") ||
+      request.nextUrl.pathname.startsWith("/item")) &&
+    !isSampleItem;
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
