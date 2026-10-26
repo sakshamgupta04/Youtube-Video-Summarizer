@@ -30,13 +30,18 @@ async def lifespan(app: FastAPI):
     if not db_ok:
         logger.warning("Database not immediately reachable. Worker will continue retrying in background.")
 
-    # 2. Preload summarization model once into memory
-    try:
-        load_summarizer_model()
-    except Exception as e:
-        logger.warning(f"Could not preload summarizer model at startup: {e}")
+    # 2. Preload summarization model asynchronously in background so Uvicorn binds port immediately
+    def _preload_model():
+        try:
+            logger.info("Preloading summarizer model in background thread...")
+            load_summarizer_model()
+            logger.info("Summarizer model preloaded successfully.")
+        except Exception as e:
+            logger.warning(f"Could not preload summarizer model: {e}")
 
-    # 3. Spawn background queue processor loop if enabled (ideal for HF Spaces single-container deploy)
+    threading.Thread(target=_preload_model, daemon=True, name="model-preload").start()
+
+    # 3. Spawn background queue processor loop if enabled
     if settings.enable_background_loop and os.environ.get("PYTEST_CURRENT_TEST") is None:
         from app.loop import run_loop
 
