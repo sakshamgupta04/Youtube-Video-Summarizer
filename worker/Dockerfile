@@ -11,21 +11,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Create non-root user with UID 1000 required by Hugging Face Spaces
+RUN useradd -m -u 1000 user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    HF_HOME=/home/user/.cache/huggingface \
+    TORCH_HOME=/home/user/.cache/torch
+
+# Create cache directories with user permissions
+RUN mkdir -p /home/user/.cache/huggingface /home/user/.cache/torch && \
+    chown -R user:user /home/user/.cache
+
+WORKDIR /home/user/app
 
 # Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=user:user requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy worker application code
-COPY . /app
+COPY --chown=user:user . /home/user/app
 
-# Expose port (default 8000, compatible with HF Spaces app_port)
-EXPOSE 8000
+# Switch to non-root user
+USER user
+
+# Expose port (7860 is the default port for Hugging Face Spaces)
+EXPOSE 7860
 
 # Healthcheck probe
 HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:7860/health || exit 1
 
 # Start Uvicorn web server (FastAPI + background queue loop)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+
