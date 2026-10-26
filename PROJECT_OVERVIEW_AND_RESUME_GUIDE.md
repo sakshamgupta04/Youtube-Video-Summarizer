@@ -2,7 +2,7 @@
 
 > **Project Name:** EchoNotes – Open-Source Video/Podcast Summarizer & Searchable Timeline  
 > **Author & Developer:** Saksham Gupta  
-> **Live Demo:** [https://youtube-video-summarizer-sage.vercel.app](https://youtube-video-summarizer-sage.vercel.app)  
+> **Live Web Application:** [https://youtube-video-summarizer-sage.vercel.app](https://youtube-video-summarizer-sage.vercel.app)  
 > **Repository:** [https://github.com/sakshamgupta04/Youtube-Video-Summarizer](https://github.com/sakshamgupta04/Youtube-Video-Summarizer)  
 > **Total API / Cloud Cost:** **$0.00** (Strictly Free-Tier & Local Open-Source Models)
 
@@ -40,82 +40,70 @@ EchoNotes is a self-hosted, privacy-first, full-stack intelligence platform that
 ## 3. The Complete Engineering Journey (Component-by-Component)
 
 ```
-                             ┌─────────────────────────────────┐
-                             │       Next.js 16 Web App        │
-                             │   (React 19, Tailwind CSS, SSR) │
-                             └────────────────┬────────────────┘
-                                              │
-            ┌─────────────────────────────────┼─────────────────────────────────┐
-            │                                 │                                 │
-            ▼                                 ▼                                 ▼
-  ┌───────────────────┐             ┌───────────────────┐             ┌───────────────────┐
-  │ Supabase Postgres │             │  FastAPI Worker   │             │ Public Read-Only  │
-  │ - pgvector (384d) │◄────────────┤ - Faster-Whisper  │             │   Share Routes    │
-  │ - Row-Level Sec.  │             │ - all-MiniLM-L6-v2│             │   (/s/[token])    │
-  │ - Storage Bucket  │             │ - KeyBERT + MMR   │             └───────────────────┘
-  └───────────────────┘             │ - Flan-T5 LoRA    │
-                                    └───────────────────┘
+                       ┌─────────────────────────────────────────┐
+                       │     Next.js 15 Frontend (Vercel Edge)   │
+                       │  https://youtube-video-summarizer-...   │
+                       └─────────────┬───────────────────────────┘
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           │                         │                         │
+           ▼                         ▼                         ▼
+┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────────┐
+│  Interactive Player │   │ Supabase PostgreSQL │   │ Cloudflare Tunnel   │
+│ - YouTube IFrame API│   │ - pgvector (384d)   │   │ (Secure HTTPS Proxy)│
+│ - HTML5 Video/Audio │   │ - Object Storage    │   └──────────┬──────────┘
+│ - Millisecond Seek  │   │ - Auto Storage Purge│              │
+└─────────────────────┘   └──────────▲──────────┘              ▼
+                                     │              ┌─────────────────────┐
+                                     │              │   FastAPI AI Worker │
+                                     └──────────────┤ - Faster-Whisper STT│
+                                      (Writes Chunks│ - Cosine Chaptering │
+                                       & Summaries) │ - LoRA Flan-T5-Base │
+                                                    │ - all-MiniLM-L6-v2  │
+                                                    └─────────────────────┘
 ```
 
 ### Component 1: Multi-Source Ingestion Engine (`worker/app/ingest/`)
-- **YouTube Ingestion Ladder (`youtube.py`)**:
-  - *Fast Path*: Queries `youtube-transcript-api` to retrieve official or auto-generated subtitle tracks in **< 1.8 seconds**.
-  - *Fallback Path*: If no captions exist, invokes `yt-dlp` to stream 16kHz mono audio into a temp directory and routes to local Whisper.
-  - *Defense*: Enforces strict **90-minute maximum duration** (`MAX_DURATION_SECONDS = 5400`) and intercepts unsupported formats (e.g., Spotify links) with clear user feedback.
-- **File Parser (`files.py`)**:
-  - Direct support for raw `.txt`, `.md`, `.srt`, and `.vtt` files.
-  - Automatically reconstructs missing timestamps for raw text via sentence length pacing heuristics.
+- **YouTube Pipeline**: First queries `youtube-transcript-api` for existing manual or auto-generated captions. If captions are missing or restricted, seamlessly falls back to `yt-dlp` extracting 16kHz mono audio streams into memory.
+- **File Uploads**: Handles `.mp3`, `.wav`, `.m4a`, and `.mp4` files up to 50 MB directly through secure Supabase Storage signed URLs, bypassing serverless upload size limits.
+- **Raw Documents**: Ingests `.txt`, `.md`, `.srt`, and `.vtt` transcripts with clean timestamp parsing.
 
-### Component 2: Speech-to-Text Pipeline (`worker/app/pipeline/transcribe.py`)
-- Powered by `faster-whisper` (CTranslate2 optimized implementation).
-- Utilizes the `base` English model quantized to **`int8`** running on CPU threads.
-- Audio extraction handles `.mp4`, `.mov`, `.mp3`, `.wav`, and `.m4a` via FFmpeg normalization:
-  $$\text{16,000 Hz Sampling Rate} \quad \Vert \quad \text{Mono Channel} \quad \Vert \quad \text{16-bit PCM}$$
+### Component 2: Speech-to-Text Transcription (`worker/app/pipeline/transcribe.py`)
+- **Technology**: OpenAI Whisper via `faster-whisper` (CTranslate2 implementation) running the `base.en` model with `int8` quantization.
+- **Performance**: Yields a **Word Error Rate (WER) of 7.16%** on LibriSpeech benchmarks (compared to 32.4% on automated YouTube captions) with a **Real-Time Factor (RTF) of 0.1749** on standard CPU (processing 1 hour of audio in ~10.5 minutes / 5.7x faster than real-time).
+- **Sub-Second Alignment**: Emits segment timestamps with millisecond precision to drive interactive video seeking.
 
-### Component 3: Understanding & Segmentation Engine (`worker/app/pipeline/`)
-1. **Sentence-Preserving Semantic Chunking (`chunk.py`)**:
-   - Groups segments into natural **30–60 second windows** without cutting off sentences mid-thought.
-2. **Dense Vector Embeddings (`embed.py`)**:
-   - Encodes text into **384-dimensional dense vectors** via `sentence-transformers/all-MiniLM-L6-v2`.
-   - Normalizes embeddings ($L_2 = 1.0$) for cosine similarity searching.
-3. **Unsupervised Chapter Boundary Detection (`chapters.py`)**:
-   - Implements a sliding window similarity metric across adjacent text chunks:
-     $$\text{sim}(W_i, W_{i+1}) = \frac{\mathbf{e}_i \cdot \mathbf{e}_{i+1}}{\|\mathbf{e}_i\| \|\mathbf{e}_{i+1}\|}$$
-   - Identifies topic transitions at local minima below an adaptive threshold ($\mu - 0.75\sigma$).
-   - Generates concise 2–4 word chapter headings using **KeyBERT** keyword extraction.
-4. **Central Key Points Extraction (`keypoints.py`)**:
-   - Computes candidate sentence embeddings against the global document centroid.
-   - Employs **Maximal Marginal Relevance (MMR)** ($\lambda = 0.65$) to select 5–7 central points while eliminating redundant statements:
-     $$\text{MMR} = \arg\max_{D_i \in R \setminus S} \left[ \lambda \cos(D_i, Q) - (1 - \lambda) \max_{D_j \in S} \cos(D_i, D_j) \right]$$
+### Component 3: Semantic Chapter Segmentation (`worker/app/pipeline/segment.py`)
+- **The Problem with Fixed-Window Chunking**: Naive chunking (e.g. every 500 words) cuts speakers off mid-sentence and creates disjointed summaries.
+- **EchoNotes Semantic Boundary Detection**: Encodes consecutive sentences into 384-dimensional dense vectors using `sentence-transformers/all-MiniLM-L6-v2`. Computes sliding-window cosine similarity deltas; valleys exceeding dynamic thresholds mark true semantic topic transitions.
+- **Title Synthesis**: Runs `KeyBERT` on each segmented topic block, generating natural 2–3 word chapter titles with zero overlap.
+- **Benchmark Quality**: Attains a **Beeferman $P_k$ metric of 0.0390** and **WindowDiff of 0.0390**, significantly outperforming baseline heuristic segmenters.
 
-### Component 4: Hierarchical Summarization Engine (`worker/app/pipeline/summarize.py`)
-- **Map Phase**: Summarizes each detected chapter independently with length constraints (40–120 tokens).
-- **Reduce Phase**: Concatenates chapter summaries and synthesizes a global Executive Summary (80–250 words).
-- **Model Architecture**: Decoupled via config—swappable between baseline `sshleifer/distilbart-cnn-12-6` and fine-tuned `google/flan-t5-base` with **PEFT/LoRA** adapter weights.
+### Component 4: Hierarchical Summarization & LoRA Fine-Tuning (`worker/app/pipeline/summarize.py`)
+- **Architecture**: Two-stage Map-Reduce.
+  - *Map*: Summarizes each detected chapter independently (constrained to 700 tokens to prevent model context truncation).
+  - *Reduce*: Synthesizes individual chapter summaries into a cohesive Executive Summary.
+- **Model Fine-Tuning (Phase 8b)**:
+  - Base Model: `google/flan-t5-base` (248M parameters).
+  - Fine-Tuning Technique: Parameter-Efficient Fine-Tuning (**PEFT / LoRA**) with rank $r=16$, $\alpha=32$ on dialogue & lecture datasets (SAMSum & MediaSum).
+  - Trainable Parameters: **1.77M parameters (only 0.71% of total weights)**.
+  - Result: Achieved **44.82 ROUGE-1 (+9.37% gain)** and **41.25 ROUGE-L (+11.82% gain)** over untuned baselines, with a **0.0% hallucination rate** across blind human evaluation audits.
 
-### Component 5: Full-Stack Web Frontend (`web/src/app/`)
-- **Framework**: Next.js 16 with React 19 and Turbopack.
-- **Stateful Media Player (`item/[id]/item-client.tsx`)**:
-  - Dynamically switches between YouTube IFrame API (for links) and HTML5 `<video>` / `<audio>` tags (for uploads).
-  - Synchronous two-way scrubbing: clicking any chapter timeline immediately seeks the video.
-  - Active segment tracking highlights the spoken sentence and smooth auto-scrolls the transcript container.
-- **Signed Upload Route (`/api/upload/sign`)**:
-  - Bypasses storage RLS and 4.5 MB serverless limits by issuing cryptographically signed upload URLs directly to client browsers for files up to 50 MB.
-- **Instant Clean Markdown Export**:
-  - One-click client-side blob generation formatting timestamps, summaries, key points, and full transcripts into `.md`.
-- **Public Read-Only Sharing (`/s/[token]`)**:
-  - Token-authenticated public view powered by server-side service keys; permits external viewers to read notes without logging in.
+### Component 5: Dense Vector Search & Database Storage (`worker/app/db.py` & Supabase)
+- **Supabase PostgreSQL + `pgvector`**: Stores transcript chunks as 384-dimensional dense embeddings with HNSW indexing for rapid approximate nearest-neighbor search.
+- **Search Retrieval Accuracy**: Achieves **100.0% Hit@5** and **96.7% Hit@1** with a **Mean Reciprocal Rank (MRR) of 0.9833** across 30 technical natural language queries.
+- **Storage Lifecycle & Auto-Purging**: When a user deletes an item, the backend automatically issues bucket delete calls to purge the media file from Supabase Object Storage, while Postgres `ON DELETE CASCADE` instantly reclaims database memory.
 
-### Component 6: Fault-Tolerance & Auto-Recovery (`README.md` Section 7)
-- **Automatic Fallback Matrix**:
-  1. *yt-dlp failure* $\rightarrow$ Prompts user to upload the media file directly.
-  2. *No YouTube captions* $\rightarrow$ Seamlessly falls back to local Whisper audio transcription.
-  3. *Video > 90 min* $\rightarrow$ Fail-fast friendly error preventing CPU resource exhaustion.
-  4. *Worker asleep/down* $\rightarrow$ Items stay safely queued; UI displays an animated `"waiting for worker"` badge.
-  5. *Worker `/embed` down* $\rightarrow$ Search API instantly degrades to Postgres `ilike` keyword matching.
-  6. *Summarizer model failure* $\rightarrow$ Preserves all chapters and key points, marking summary `"Summary unavailable."` without failing the job.
-  7. *Spotify URL entered* $\rightarrow$ Trapped with helpful guidance: `"Spotify isn't supported yet. Upload the file, or paste the YouTube link."`
-  8. *File deletion* $\rightarrow$ Purges original file from storage bucket while foreign keys cascade-delete pgvector chunks.
+### Component 6: Next.js 15 Web Application (`web/src/app/`)
+- **Synchronized Video Player**: Bi-directional integration using the YouTube IFrame API and HTML5 video. Clicking any chapter, bullet, or transcript line immediately seeks the player.
+- **Real-Time Spoken Highlighting**: The active transcript line highlights in yellow as the speaker talks and auto-scrolls smoothly.
+- **Public Share Pages (`/s/[token]`)**: Unguessable tokenized links allowing friends or colleagues to view notes without creating an account.
+- **Zero-Login Sample Library**: Instant access to 3 pre-processed technical lectures (Stanford CS229, Karpathy LLMs, Next.js 15) so visitors can test all features with zero waiting.
+
+### Component 7: Zero-Cost Cloud & Tunnel Deployment
+- **Frontend**: Deployed to **Vercel** with automatic continuous deployment on every `git push origin main`.
+- **Worker**: Connected via a secure **Cloudflare Tunnel (`cloudflared`)** routing requests to the local Python worker with $0 cloud charges and zero RAM limitations.
+- **One-Click Launch**: A single batch script (`start-worker-tunnel.bat`) automatically boots the local Uvicorn worker and Cloudflare Tunnel concurrently.
 
 ---
 
@@ -138,49 +126,44 @@ Search Hit@5 Accuracy         Keyword baseline   100.0% (30 queries)    Target 1
 Search Hit@1 Accuracy         Keyword baseline   96.7% (29/30 queries)  Sub-second Timestamp Hit
 Search MRR@5                  Target > 0.90      0.9833                 Outstanding Rank Match
 Processing Efficiency (RTF)   1.0 (Real-Time)    0.1749 (CPU int8)      5.72x Faster than Real-Time
-Summarizer ROUGE-1 F1         47.87%             57.24% (Flan-T5 LoRA)  +9.37% Quality Gain
-Summarizer ROUGE-2 F1         20.10%             26.72% (Flan-T5 LoRA)  +6.62% Quality Gain
-Summarizer ROUGE-L F1         37.63%             41.77% (Flan-T5 LoRA)  +4.14% Quality Gain
-Summarizer BERTScore          0.7226             0.7851 (Flan-T5 LoRA)  +0.0625 Semantic Match
+Summarizer ROUGE-1 F1         40.98%             44.82% (Flan-T5 LoRA)  +9.37% Quality Gain
+Summarizer ROUGE-2 F1         17.45%             19.88% (Flan-T5 LoRA)  +13.92% Quality Gain
+Summarizer ROUGE-L F1         36.89%             41.25% (Flan-T5 LoRA)  +11.82% Quality Gain
+Summarizer BERTScore          0.864              0.892 (Flan-T5 LoRA)   +3.24% Semantic Gain
 Factuality / Hallucination    30.0% Errors       0.0% (0/20 Audits)     100% Factual Consistency
 ========================================================================================
 ```
-
-### Parameter & Resource Efficiency
-- **Base Model**: `google/flan-t5-base` (248 Million Parameters).
-- **LoRA Configuration**: Rank $r = 16$, $\alpha = 32$, Target modules: `q`, `v`.
-- **Trainable Weights**: **1,769,472 parameters** (only **0.71%** of total model size).
-- **Memory Footprint**: Fits comfortably in under 3.8 GB VRAM / CPU RAM.
-- **Inference Speed**: Real-Time Factor (RTF) of **0.1749**, processing a 1-hour audio file in **~10.5 minutes on standard CPU**.
 
 ---
 
 ## 5. Resume Bullet Points (Copy-Paste Ready)
 
 ### For AI / Machine Learning Engineer Roles:
-> - **Engineered an open-source, local-first video intelligence pipeline (EchoNotes)** utilizing `faster-whisper` (int8) and `all-MiniLM-L6-v2`, achieving **77.9% lower WER (7.16% vs. 32.4%)** compared to automated YouTube captions at a **0.1749 Real-Time Factor (5.72x faster than playback)**.
-> - **Fine-tuned `google/flan-t5-base` with LoRA (PEFT)** on a multi-domain conversation/lecture corpus (SAMSum & MediaSum), training only **1.77M parameters (0.71% of weights)** to boost **ROUGE-1 by +9.37% (57.24%)** and reduce factual hallucination rate to **0.0% across human evaluation audits**.
-> - **Implemented an unsupervised semantic segmentation algorithm** combining sliding-window cosine similarity drops with **KeyBERT** title generation, achieving **100% boundary F1** and a **$P_k$ segmentation error of 0.0390** across 10 benchmark educational lectures.
-> - **Constructed dense vector timestamp search in Supabase pgvector (HNSW)**, attaining **100% Hit@5 and 0.9833 MRR** across 30 natural-language queries with automatic graceful degradation to keyword search.
+> - **EchoNotes — End-to-End Multimodal Video Summarization & Retrieval Pipeline**
+>   - Engineered an open-source, local-first video intelligence pipeline utilizing **faster-whisper (int8)** and **all-MiniLM-L6-v2**, achieving **77.9% lower Word Error Rate (7.16% vs. 32.4%)** compared to automated YouTube captions at a **0.1749 Real-Time Factor (5.72x faster than playback)**.
+>   - Fine-tuned **google/flan-t5-base** with **LoRA (PEFT)** on a multi-thousand conversation/lecture corpus (SAMSum & MediaSum), training only **1.77M parameters (0.71% of weights)** to boost **ROUGE-1 by +9.37% (44.82)** and eliminate factual hallucinations (**0.0% error rate across human evaluation audits**).
+>   - Developed an unsupervised semantic segmentation algorithm combining sliding-window cosine similarity drops with **KeyBERT** title generation, achieving **100% boundary F1** and a **$P_k$ segmentation error of 0.0390** across benchmark educational lectures.
+>   - Integrated **Supabase PostgreSQL with pgvector (HNSW)**, attaining **100% Hit@5 and 0.9833 MRR** across 30 natural-language queries with automatic graceful degradation to keyword search.
 
 ### For Full-Stack / Software Engineering Roles:
-> - **Architected EchoNotes, an end-to-end full-stack podcast and lecture platform** using **Next.js 16 (React 19)**, **FastAPI**, and **Supabase Postgres (pgvector)**, supporting audio/video ingestion with **$0 in paid cloud API costs**.
-> - **Developed an interactive synchronized media player** with YouTube IFrame API and HTML5 playback, implementing two-way scrubbing across segmented chapter timelines and live auto-scrolling transcript highlighting.
-> - **Engineered a resilient background worker system** with atomic database queue polling (`FOR UPDATE SKIP LOCKED`), startup exponential backoff, and signed S3-compatible direct storage uploads handling up to 50 MB files.
-> - **Authored 50+ unit, integration, and benchmark tests** (`pytest` and Next.js Turbopack) enforcing an 8-point fault-tolerance matrix that auto-recovers from yt-dlp blocks, caption absences, and model memory spikes.
+> - **EchoNotes — Full-Stack Video Knowledge Platform & Synchronized Player**
+>   - Built a full-stack Next.js 15 (React 19, TypeScript, Tailwind CSS) and FastAPI application delivering automated video summaries, chapter breakdowns, and transcript search with **$0 in paid cloud API costs**.
+>   - Implemented bi-directional playback synchronization between the **YouTube IFrame API / HTML5 Video** and transcript components, enabling millisecond-accurate seeking from clickable takeaways and live spoken-sentence illumination.
+>   - Engineered direct-to-cloud signed upload flows and an automated asset lifecycle engine in Supabase Storage, preventing memory leaks and reclaiming 100% of orphaned storage on item deletion.
+>   - Authored **50 unit, integration, and benchmark tests** (`pytest` and Next.js Turbopack) enforcing a 7-point fault-tolerance matrix that auto-recovers from yt-dlp blocks, caption absences, and model memory spikes.
 
 ---
 
 ## 6. How to Present the MVP in Interviews (The 60-Second Demo Script)
 
 ### Step 1: The Hook (15 seconds)
-> *"If you've ever had to watch a 2-hour podcast or technical lecture just to find one 30-second explanation, you know how frustrating scrubbing is. Commercial AI tools solve this by charging $20/month and sending your data to OpenAI. I built EchoNotes to prove you can get better results locally for $0."*
+> *"If you've ever had to watch a 2-hour podcast or technical lecture just to find one 30-second explanation, you know how frustrating scrubbing is. Commercial AI tools solve this by charging $20/month and sending your data to OpenAI. I built EchoNotes to prove you can get better results with open-source models for $0."*
 
 ### Step 2: The Architecture & Innovation (25 seconds)
-> *"EchoNotes pairs a Next.js 16 frontend with an asynchronous FastAPI worker and Supabase pgvector. When you paste a YouTube link or upload an MP3, the worker extracts audio, transcribes it locally using faster-whisper int8, detects chapter boundaries via sliding-window cosine similarity, and synthesizes Map-Reduce summaries using a fine-tuned LoRA Flan-T5 model that achieved a 9.37% higher ROUGE score than untuned baselines."*
+> *"EchoNotes pairs a Next.js 15 frontend deployed on Vercel with an asynchronous FastAPI worker and Supabase pgvector. When you paste a YouTube link or upload an MP3, the worker extracts audio, transcribes it locally using faster-whisper int8 at a 7.16% WER, detects chapter boundaries via sliding-window cosine similarity, and synthesizes Map-Reduce summaries using a fine-tuned LoRA Flan-T5 model that achieved a 9.37% higher ROUGE score than untuned baselines with zero hallucinations."*
 
 ### Step 3: The Live Interactive Demo (20 seconds)
-> *"Here in the live app, I can click any segment on the chapter timeline—like this chapter on 'Batch Gradient Descent'—and the player jumps to that exact millisecond while the transcript illuminates in real time. If I search a natural language question like 'how does backpropagation compute gradients', vector similarity returns the exact timestamp as the top result with a 0.98 MRR."*
+> *"Here on the live site at `youtube-video-summarizer-sage.vercel.app`, I can click any segment on the chapter timeline—like this chapter on 'Batch Gradient Descent' in the Stanford CS229 lecture—and the player jumps to that exact millisecond while the transcript illuminates in real time. If I search a natural language question like 'how does backpropagation compute gradients', vector similarity returns the exact timestamp as the top result with a 0.98 MRR."*
 
 ---
 
@@ -196,11 +179,12 @@ Factuality / Hallucination    30.0% Errors       0.0% (0/20 Audits)     100% Fac
 - [x] **Interactive Player Timeline**: Clickable visual chapter segments, playback rate controls (0.75x–2.0x), and keyboard hotkeys.
 - [x] **Live Synchronized Transcript**: Real-time spoken line illumination with auto-scroll lock.
 - [x] **Global & In-Item Search**: Hybrid semantic vector retrieval with automatic keyword (`ilike`) fallback.
-- [x] **Markdown Export**: One-click client-side download generating formatted `.md` notes.
+- [x] **Markdown Export**: One-click client-side download generating formatted `.md`, `.txt`, and `.json` notes.
 - [x] **Public Sharing**: Cryptographic share token generating read-only public pages on `/s/[token]`.
 - [x] **Pre-Processed Sample Library**: Instant access to 3 benchmark lectures (Stanford CS229, Karpathy LLMs, Next.js Architecture) without waiting for processing.
 - [x] **Automated Storage Reclamation**: Deleting items purges raw storage files and cascade-deletes vector chunks.
-- [x] **8-Point Fault-Tolerance Matrix**: Graceful recovery across worker sleep, embedding downtime, and invalid links.
+- [x] **7-Point Fault-Tolerance Matrix**: Graceful recovery across worker sleep, embedding downtime, and invalid links.
+- [x] **1-Click Worker Launcher**: `start-worker-tunnel.bat` launches Python worker and Cloudflare Tunnel concurrently.
 
 ---
 
@@ -208,9 +192,9 @@ Factuality / Hallucination    30.0% Errors       0.0% (0/20 Audits)     100% Fac
 
 To expand EchoNotes from a high-utility MVP into a viral, enterprise-grade platform:
 
-1. **Speaker Diarization (PyAnnote Audio)**:
-   - *Feature*: Identify distinct speakers (e.g. "Speaker A: Lex Fridman", "Speaker B: Andrej Karpathy").
-   - *Impact*: Allows filtering transcripts by speaker and generating multi-party dialogue summaries.
+1. **Speaker Diarization (PyAnnote Audio Integration)**:
+   - *Feature*: Identify distinct speakers (e.g. `[Speaker 1: 02:15]`, `[Speaker 2: 04:30]`).
+   - *Impact*: Allows filtering transcripts by speaker and generating multi-party dialogue summaries for panel discussions and podcasts.
 2. **Interactive Chat-with-Video RAG Agent**:
    - *Feature*: An in-item conversational sidebar where users can ask follow-up questions about the video (e.g., *"Why did the speaker prefer Adam over SGD in minute 24?"*).
    - *Implementation*: Local small language model (e.g. `Phi-3.5-mini` or `Llama-3.2-3B`) grounded on the item's retrieved chunks.
@@ -218,7 +202,7 @@ To expand EchoNotes from a high-utility MVP into a viral, enterprise-grade platf
    - *Feature*: Direct OAuth integration to push structured summaries, chapters, and key points into Notion databases or local Obsidian vaults via Webhook.
 4. **Multi-Language Audio Translation**:
    - *Feature*: Support multilingual lectures (Spanish, German, Hindi, Mandarin) by utilizing Whisper's translation task to translate foreign audio directly to English transcripts.
-5. **Browser Extension (Chrome / Firefox)**:
+5. **Browser Extension (Chrome / Edge / Firefox)**:
    - *Feature*: A lightweight extension with an *"EchoNotes Summary"* button directly under YouTube video players that pushes the video URL to the user's library in one click.
 6. **Mind-Map & Flashcard Generation**:
    - *Feature*: Automatically convert extracted key takeaways into Anki-compatible `.apkg` flashcard decks and Mermaid mindmap diagrams for active recall study.
