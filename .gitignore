@@ -44,3 +44,8 @@ worker/downloads/
 *.mp3
 *.mp4
 *.webm
+
+# Binaries & local tools
+tools/
+*.exe
+
