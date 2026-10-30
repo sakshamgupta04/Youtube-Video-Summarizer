@@ -215,24 +215,34 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
       }
 
       try {
+        const originUrl = typeof window !== "undefined" ? window.location.origin : undefined;
         ytPlayerRef.current = new window.YT.Player("youtube-player", {
           videoId: item.video_id,
+          host: "https://www.youtube.com",
           playerVars: {
             autoplay: 0,
             playsinline: 1,
             rel: 0,
             modestbranding: 1,
-            origin: typeof window !== "undefined" ? window.location.origin : undefined,
+            origin: originUrl,
             enablejsapi: 1,
+            widget_referrer: typeof window !== "undefined" ? window.location.href : undefined,
           },
           events: {
             onReady: (event: any) => {
               if (initialTime > 0) {
-                event.target.seekTo(initialTime, true);
+                try {
+                  event.target.seekTo(initialTime, true);
+                } catch {}
               }
             },
             onStateChange: (event: any) => {
-              setIsPlaying(event.data === 1);
+              try {
+                setIsPlaying(event.data === 1);
+              } catch {}
+            },
+            onError: (event: any) => {
+              console.warn("YouTube player event error:", event?.data);
             },
           },
         });
