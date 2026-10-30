@@ -2,14 +2,60 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 py-12 max-w-6xl mx-auto w-full">
-      {/* Top System Status Bar */}
-      <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 backdrop-blur-md mb-8 fade-in">
-        <span className="flex h-2 w-2 rounded-full bg-emerald-400 badge-pulse" />
-        <span className="text-xs font-mono font-medium text-indigo-300">
-          Zero-Cloud API Architecture &bull; 100% Free Open-Source Models
-        </span>
-      </div>
+    <div className="min-h-full flex flex-col">
+      {/* Top Brand Navigation Bar */}
+      <header className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-glass)] backdrop-blur-xl sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group" title="EchoNotes AI Studio Home">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            </div>
+            <div>
+              <span className="font-bold text-base text-white tracking-tight flex items-center gap-1.5">
+                EchoNotes <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">Studio</span>
+              </span>
+            </div>
+          </Link>
+
+          <nav className="flex items-center gap-3 sm:gap-4">
+            <Link
+              href="/search"
+              className="text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors hidden sm:inline-block"
+            >
+              Semantic Search
+            </Link>
+            <a
+              href="https://github.com/sakshamgupta04/Youtube-Video-Summarizer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors hidden md:inline-block"
+            >
+              GitHub
+            </a>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 transition-all active:scale-95"
+            >
+              Launch Studio
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 py-12 max-w-6xl mx-auto w-full">
+        {/* Top System Status Bar */}
+        <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 backdrop-blur-md mb-8 fade-in">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400 badge-pulse" />
+          <span className="text-xs font-mono font-medium text-indigo-300">
+            Zero-Cloud API Architecture &bull; 100% Free Open-Source Models
+          </span>
+        </div>
 
       {/* Hero Section */}
       <div className="slide-up max-w-3xl text-center space-y-5">
@@ -263,5 +309,6 @@ export default function HomePage() {
         ))}
       </div>
     </main>
+  </div>
   );
 }

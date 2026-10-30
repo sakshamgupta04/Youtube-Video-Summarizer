@@ -584,14 +584,30 @@ ${transcriptText || "No transcript available."}
       {/* Top Studio Nav */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="flex items-center gap-3 min-w-0">
+          <Link href="/" className="flex items-center gap-2 group shrink-0" title="Return to Home">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/20 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
+            </div>
+            <span className="text-xs sm:text-sm font-bold tracking-tight text-white group-hover:text-indigo-300 transition-colors hidden sm:inline">
+              Echo<span className="text-indigo-400">Notes</span>
+            </span>
+          </Link>
+
+          <span className="text-[var(--text-muted)] text-xs hidden sm:inline">&bull;</span>
+
           <Link
             href="/library"
             className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-white transition-colors px-2.5 py-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-indigo-500/50"
+            title="Go to Library"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            Studio Library
+            Library
           </Link>
 
           <span className="text-[var(--text-muted)] text-xs hidden sm:inline">&bull;</span>

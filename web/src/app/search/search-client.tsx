@@ -119,8 +119,8 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
       {/* Top Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/80 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-6">
-          <Link href="/library" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+          <Link href="/" className="flex items-center gap-3 group" title="Return to Home">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/20 transition-all">
               <svg
                 width="16"
                 height="16"
@@ -136,7 +136,7 @@ export default function SearchClient({ userEmail }: SearchClientProps) {
                 <line x1="12" x2="12" y1="19" y2="22" />
               </svg>
             </div>
-            <span className="text-base font-bold tracking-tight text-white">
+            <span className="text-base font-bold tracking-tight text-white group-hover:text-indigo-300 transition-colors">
               Echo<span className="text-indigo-400">Notes</span> <span className="text-xs font-mono font-normal text-[var(--text-muted)]">Studio</span>
             </span>
           </Link>
