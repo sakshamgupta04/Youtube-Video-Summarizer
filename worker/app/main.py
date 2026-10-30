@@ -25,24 +25,33 @@ async def lifespan(app: FastAPI):
     global _loop_thread
     logger.info("EchoNotes Worker starting up...")
 
-    # 1. Verify database connection with retry on cold startup
-    db_ok = verify_db_connection(max_retries=5, initial_backoff=1.5)
-    if not db_ok:
-        logger.warning("Database not immediately reachable. Worker will continue retrying in background.")
+    import sys
+    is_test = (
+        "pytest" in sys.modules
+        or bool(os.environ.get("PYTEST_CURRENT_TEST"))
+        or os.environ.get("TESTING") == "1"
+    )
 
-    # 2. Preload summarization model asynchronously in background so Uvicorn binds port immediately
-    def _preload_model():
-        try:
-            logger.info("Preloading summarizer model in background thread...")
-            load_summarizer_model()
-            logger.info("Summarizer model preloaded successfully.")
-        except Exception as e:
-            logger.warning(f"Could not preload summarizer model: {e}")
+    # 1. Verify database connection with retry on cold startup (skip long retries in test mode)
+    if not is_test:
+        db_ok = verify_db_connection(max_retries=5, initial_backoff=1.5)
+        if not db_ok:
+            logger.warning("Database not immediately reachable. Worker will continue retrying in background.")
 
-    threading.Thread(target=_preload_model, daemon=True, name="model-preload").start()
+    # 2. Preload summarization model asynchronously in background so Uvicorn binds port immediately (skip in test mode)
+    if not is_test:
+        def _preload_model():
+            try:
+                logger.info("Preloading summarizer model in background thread...")
+                load_summarizer_model()
+                logger.info("Summarizer model preloaded successfully.")
+            except Exception as e:
+                logger.warning(f"Could not preload summarizer model: {e}")
 
-    # 3. Spawn background queue processor loop if enabled
-    if settings.enable_background_loop and os.environ.get("PYTEST_CURRENT_TEST") is None:
+        threading.Thread(target=_preload_model, daemon=True, name="model-preload").start()
+
+    # 3. Spawn background queue processor loop if enabled (skip in test mode)
+    if settings.enable_background_loop and not is_test:
         from app.loop import run_loop
 
         logger.info("Spawning background queue polling worker thread...")

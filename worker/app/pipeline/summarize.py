@@ -1,4 +1,4 @@
-"""Summarization pipeline module using Map-Reduce with DistilBART-CNN.
+"""Summarization pipeline module using Map-Reduce with DistilBART-CNN or Flan-T5 LoRA.
 
 Per PROJECT_RULES.md (Section 5 & 8):
 - Map step: Summarize each chapter (input at most ~700 tokens, split into chunks if longer).
@@ -21,10 +21,17 @@ logger = logging.getLogger("echonotes.summarize")
 _model = None
 _tokenizer = None
 _device = None
+_is_t5_model = False
 
 # DistilBART maximum input tokens is 1024; chunk chapters exceeding 700 tokens
 MAX_INPUT_TOKENS = 700
 CHUNK_OVERLAP_TOKENS = 50
+
+# Speech filler cleanup before summarization
+TRANSCRIPT_CLEANUP_REGEX = re.compile(
+    r"\b(um|uh|you know|sort of|kind of|i mean|basically|like,|so yeah|alright)\b",
+    re.IGNORECASE,
+)
 
 
 def get_device():
@@ -38,19 +45,21 @@ def get_device():
 
 def load_summarizer_model() -> Tuple[Any, Any, Any]:
     """Load tokenizer and model into memory once."""
-    global _model, _tokenizer, _device
+    global _model, _tokenizer, _device, _is_t5_model
     if _model is None or _tokenizer is None:
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
         model_name = settings.summarizer_model
         logger.info(f"Loading summarizer model '{model_name}'...")
+        _is_t5_model = "t5" in model_name.lower()
 
         try:
             from peft import PeftConfig, PeftModel
             try:
                 peft_config = PeftConfig.from_pretrained(model_name)
                 base_model_name = peft_config.base_model_name_or_path or "google/flan-t5-base"
+                _is_t5_model = "t5" in base_model_name.lower()
                 logger.info(f"Detected PEFT adapter. Loading base model '{base_model_name}'...")
                 _tokenizer = AutoTokenizer.from_pretrained(base_model_name)
                 base_model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
@@ -82,36 +91,73 @@ def get_summarizer() -> Tuple[Any, Any, Any]:
 
 
 def clean_summary_text(text: str) -> str:
-    """Format and clean summary output."""
+    """Format, clean, and deduplicate summary output with complete sentence boundaries."""
     if not text:
         return ""
     # Fix tokenized punctuation spacing (e.g. "word ." -> "word.")
     cleaned = re.sub(r'\s+([,.:;?!])', r'\1', text)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+    # If the summary ends abruptly without a terminal punctuation mark,
+    # trim back to the last complete sentence to guarantee clean grammar.
+    if cleaned and cleaned[-1] not in ".!?":
+        last_punct = max(cleaned.rfind("."), cleaned.rfind("!"), cleaned.rfind("?"))
+        if last_punct > 20:
+            cleaned = cleaned[: last_punct + 1].strip()
+        else:
+            cleaned += "."
+
+    # Remove duplicated consecutive sentences
+    sentences = re.split(r'(?<=[.!?])\s+', cleaned)
+    seen_sents = set()
+    deduped_sents = []
+    for s in sentences:
+        s_norm = re.sub(r'[^\w]', '', s.lower())
+        if s_norm and s_norm not in seen_sents:
+            seen_sents.add(s_norm)
+            deduped_sents.append(s)
+
+    return " ".join(deduped_sents)
+
+
+def preprocess_transcript_for_summary(text: str) -> str:
+    """Clean conversational fillers and repeated tokens to maximize context window value."""
+    # Remove filler words
+    cleaned = TRANSCRIPT_CLEANUP_REGEX.sub(" ", text)
+    # Remove repeated adjacent words (e.g. "the the", "we we")
+    cleaned = re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
 
 def summarize_block(
     text: str,
-    max_new_tokens: int = 120,
+    max_new_tokens: int = 130,
     min_new_tokens: int = 25,
     num_beams: int = 2,
 ) -> str:
     """Summarize a single coherent text block (<= 700 tokens) using the Seq2Seq model."""
-    clean_text = text.strip()
+    clean_text = preprocess_transcript_for_summary(text)
     if not clean_text:
         return ""
 
     words = clean_text.split()
     if len(words) < 20:
-        return clean_text
+        return clean_summary_text(clean_text)
 
     import torch
 
     model, tokenizer, device = get_summarizer()
 
+    # Format input with instruction conditioning if using T5 / Flan-T5
+    is_t5 = "t5" in getattr(model, "name_or_path", "").lower() or _is_t5_model
+    if is_t5:
+        input_prompt = f"Summarize the key concepts and findings from this lecture excerpt:\n\n{clean_text}"
+    else:
+        input_prompt = clean_text
+
     raw_inputs = tokenizer(
-        clean_text,
+        input_prompt,
         return_tensors="pt",
         truncation=True,
         max_length=1024,
@@ -124,24 +170,41 @@ def summarize_block(
     input_tokens = inputs["input_ids"].shape[1]
 
     # Dynamically scale generation bounds for shorter inputs
-    effective_max = min(max_new_tokens, max(25, int(input_tokens * 0.7)))
-    effective_min = min(min_new_tokens, max(10, int(effective_max * 0.4)))
+    effective_max = min(max_new_tokens, max(30, int(input_tokens * 0.7)))
+    effective_min = min(min_new_tokens, max(10, int(effective_max * 0.35)))
+
+    gen_kwargs: dict[str, Any] = {
+        "input_ids": inputs["input_ids"],
+        "attention_mask": inputs.get("attention_mask"),
+        "max_new_tokens": effective_max,
+        "min_new_tokens": effective_min,
+        "num_beams": num_beams,
+        "early_stopping": True,
+        "no_repeat_ngram_size": 3,
+        "repetition_penalty": 1.2,
+        "length_penalty": 1.2,
+    }
+
+    # Only set forced_bos_token_id for models where BOS is configured (e.g. BART <s>), not T5
+    if not is_t5 and hasattr(model.config, "bos_token_id") and model.config.bos_token_id is not None:
+        gen_kwargs["forced_bos_token_id"] = model.config.bos_token_id
 
     with torch.inference_mode():
-        output_ids = model.generate(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs.get("attention_mask"),
-            max_new_tokens=effective_max,
-            min_new_tokens=effective_min,
-            num_beams=num_beams,
-            early_stopping=True,
-            no_repeat_ngram_size=3,
-            forced_bos_token_id=0,
-            length_penalty=1.5,
-        )
+        output_ids = model.generate(**gen_kwargs)
 
     raw_summary = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-    return clean_summary_text(raw_summary)
+    summary = clean_summary_text(raw_summary)
+
+    # Fallback guardrail: If model produces an empty or degenerate summary,
+    # extract the first 2 clear sentences from the clean text.
+    if len(summary.split()) < 5:
+        sentences = re.split(r'(?<=[.!?])\s+', clean_text)
+        fallback_sents = [s.strip() for s in sentences if len(s.split()) >= 6][:2]
+        summary = " ".join(fallback_sents)
+        if summary and not summary.endswith("."):
+            summary += "."
+
+    return summary
 
 
 def chunk_long_text(text: str, max_tokens: int = MAX_INPUT_TOKENS) -> list[str]:
@@ -181,18 +244,18 @@ def summarize_chapter_text(text: str) -> str:
     chunks = chunk_long_text(text, max_tokens=MAX_INPUT_TOKENS)
 
     if len(chunks) == 1:
-        return summarize_block(chunks[0], max_new_tokens=130, min_new_tokens=30)
+        return summarize_block(chunks[0], max_new_tokens=140, min_new_tokens=30, num_beams=2)
 
     # Sub-chunk summarization (Map)
     sub_summaries = [
-        summarize_block(c, max_new_tokens=80, min_new_tokens=20)
+        summarize_block(c, max_new_tokens=85, min_new_tokens=20, num_beams=2)
         for c in chunks
         if c.strip()
     ]
     combined_sub = " ".join(s for s in sub_summaries if s)
 
     # Combine sub-summaries (Reduce)
-    return summarize_block(combined_sub, max_new_tokens=140, min_new_tokens=35)
+    return summarize_block(combined_sub, max_new_tokens=150, min_new_tokens=35, num_beams=3)
 
 
 def summarize_chapters_and_overall(
@@ -236,7 +299,7 @@ def summarize_chapters_and_overall(
 
         chapter_text = " ".join(s.get("text", "") for s in matching_segs).strip()
 
-        # If chapter text is empty (rare edge case), fallback to segment text
+        # If chapter text is empty (rare edge case), fallback to segment text or title
         if not chapter_text:
             chapter_text = ch.get("title", "")
 
@@ -250,8 +313,8 @@ def summarize_chapters_and_overall(
             }
         )
 
-    # Reduce step: Summarize chapter summaries into one overall summary
-    logger.info("Running Reduce step for overall summary...")
+    # Reduce step: Summarize chapter summaries into one cohesive Executive Summary
+    logger.info("Running Reduce step for overall executive summary...")
     chapter_summaries_list = [
         ch["summary"] for ch in updated_chapters if ch.get("summary")
     ]
@@ -262,11 +325,11 @@ def summarize_chapters_and_overall(
         overall_summary = chapter_summaries_list[0]
     else:
         combined_summaries = " ".join(chapter_summaries_list)
-        # Summarize the combined chapter summaries
+        # Summarize the combined chapter summaries into an executive synthesis
         overall_summary = summarize_block(
             combined_summaries,
-            max_new_tokens=180,
-            min_new_tokens=50,
+            max_new_tokens=190,
+            min_new_tokens=55,
             num_beams=3,
         )
 
