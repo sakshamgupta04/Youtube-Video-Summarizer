@@ -30,10 +30,25 @@ export async function DELETE(
       .single();
 
     if (fetchError || !item) {
-      return NextResponse.json(
-        { error: "Item not found or unauthorized to delete" },
-        { status: 404 }
-      );
+      // Check if item exists under another user to distinguish 403 Forbidden from idempotent 200
+      try {
+        const adminSupabase = createAdminClient();
+        const { data: existingAnyUser } = await adminSupabase
+          .from("items")
+          .select("id, user_id")
+          .eq("id", id)
+          .single();
+
+        if (existingAnyUser && existingAnyUser.user_id !== user.id) {
+          return NextResponse.json(
+            { error: "Unauthorized: You do not own this item." },
+            { status: 403 }
+          );
+        }
+      } catch {}
+
+      // If it doesn't exist in the database at all, treat as already deleted (idempotent DELETE)
+      return NextResponse.json({ success: true, message: "Item already removed", id });
     }
 
     // 2. If item has an uploaded file in Supabase storage, remove it to reclaim disk space

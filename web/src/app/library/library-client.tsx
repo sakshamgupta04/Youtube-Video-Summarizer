@@ -80,7 +80,8 @@ export default function LibraryClient({ userEmail }: LibraryClientProps) {
         method: "DELETE",
       });
 
-      if (!res.ok) {
+      // If already deleted (404) or success (200), keep it removed
+      if (!res.ok && res.status !== 404) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to delete item");
       }

@@ -542,7 +542,7 @@ ${transcriptText || "No transcript available."}
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
-      if (!res.ok) {
+      if (!res.ok && res.status !== 404) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to delete item");
       }
