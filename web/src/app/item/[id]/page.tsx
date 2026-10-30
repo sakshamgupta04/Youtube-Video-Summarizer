@@ -38,7 +38,8 @@ export default async function ItemPage({ params }: ItemPageProps) {
     .eq("id", id)
     .single();
 
-  if (error || !item) {
+  // Strict user isolation: never display another user's item
+  if (error || !item || item.user_id !== user.id) {
     notFound();
   }
 

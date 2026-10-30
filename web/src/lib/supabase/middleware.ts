@@ -31,23 +31,32 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes: redirect to /login if not authenticated
-  // Sample demo items (/item/sample-*) are public so recruiters and visitors can test without an account
+  // Sample demo items (/item/sample-*) and public shared notes (/s/*) are open for exploration
   const isSampleItem = request.nextUrl.pathname.startsWith("/item/sample-");
+  const isPublicShare = request.nextUrl.pathname.startsWith("/s/");
   const isProtected =
-    (request.nextUrl.pathname.startsWith("/library") ||
-      request.nextUrl.pathname.startsWith("/item")) &&
-    !isSampleItem;
+    (
+      request.nextUrl.pathname.startsWith("/library") ||
+      request.nextUrl.pathname.startsWith("/add") ||
+      request.nextUrl.pathname.startsWith("/search") ||
+      request.nextUrl.pathname.startsWith("/item")
+    ) &&
+    !isSampleItem &&
+    !isPublicShare;
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
-  // If logged in and visiting login, redirect to library
+  // If logged in and visiting login, redirect to intended target or library
   if (user && request.nextUrl.pathname === "/login") {
+    const nextPath = request.nextUrl.searchParams.get("next") || "/library";
     const url = request.nextUrl.clone();
-    url.pathname = "/library";
+    url.pathname = nextPath.startsWith("/") ? nextPath : "/library";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
