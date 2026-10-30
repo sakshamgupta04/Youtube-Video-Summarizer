@@ -70,6 +70,7 @@ export default function ItemClient({ item, mediaUrl, userEmail }: ItemClientProp
   const [shareToken, setShareToken] = useState<string | null>(item.share_token);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isProvenanceOpen, setIsProvenanceOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedTakeaways, setCopiedTakeaways] = useState(false);
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
@@ -599,11 +600,16 @@ ${transcriptText || "No transcript available."}
             {item.title || "Untitled Summary"}
           </span>
 
-          {/* Model Status Pill */}
-          <div className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono font-medium text-emerald-400">
+          {/* Model Status Pill / Architecture Inspector */}
+          <button
+            onClick={() => setIsProvenanceOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono font-medium text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
+            title="Inspect Zero-API Pipeline Architecture"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 badge-pulse" />
             Choi C99 Depth &bull; 0-Cloud Cost
-          </div>
+            <span className="text-[9px] text-emerald-300 underline ml-0.5">Inspect</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -1265,6 +1271,84 @@ ${transcriptText || "No transcript available."}
             ) : (
               <p className="text-xs text-red-400">Could not generate share link.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Architecture & Pipeline Provenance Modal */}
+      {isProvenanceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md fade-in">
+          <div className="glass-card max-w-lg w-full p-6 sm:p-7 rounded-2xl border border-[var(--border-subtle)] shadow-2xl relative">
+            <button
+              onClick={() => setIsProvenanceOpen(false)}
+              className="absolute right-4 top-4 text-[var(--text-muted)] hover:text-white text-lg"
+            >
+              &times;
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Pipeline Execution & Model Provenance</h3>
+                <p className="text-[11px] text-[var(--text-muted)] font-mono">100% Zero-Cloud-API &bull; Self-Hosted Quantized Inference</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-xl bg-[#090b11] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Speech-to-Text (STT)</span>
+                  <span className="font-mono text-emerald-400 text-[10px]">faster-whisper int8</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                  CTranslate2 quantized Whisper model running on CPU with zero GPU memory requirement and ~5.7x realtime speed.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#090b11] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Chapter Segmentation</span>
+                  <span className="font-mono text-cyan-400 text-[10px]">Choi C99 Depth Scoring</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                  Computes semantic cosine valleys relative to local topic peaks (<span className="font-mono text-cyan-300">depth = ((peakL - sim) + (peakR - sim)) / 2</span>) to prevent premature chapter cuts.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#090b11] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Key Takeaways Extraction</span>
+                  <span className="font-mono text-indigo-400 text-[10px]">MMR &lambda;=0.55 + Disfluency Regex</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                  Strips conversational spoken noise (&ldquo;uh&rdquo;, &ldquo;you know&rdquo;) and balances centroid semantic centrality against diversity.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#090b11] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Vector Search Space</span>
+                  <span className="font-mono text-violet-400 text-[10px]">all-MiniLM-L6-v2 (384d)</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                  Cosine distance HNSW vector indexing inside PostgreSQL (<span className="font-mono text-violet-300">pgvector</span>) with strict Row-Level Security per user.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px]">
+              <span className="text-emerald-400 font-mono font-semibold">Total Cloud API Cost: $0.00</span>
+              <button
+                onClick={() => setIsProvenanceOpen(false)}
+                className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs"
+              >
+                Close Trace
+              </button>
+            </div>
           </div>
         </div>
       )}
