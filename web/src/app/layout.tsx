@@ -1,32 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "EchoNotes – Podcast & Lecture Summarizer",
+  title: "EchoNotes – AI Video Intelligence & Transcript Studio",
   description:
-    "Transcribe, summarize, and search through podcasts and lectures with AI-powered chapters, key points, and semantic search.",
+    "Zero-cloud-cost video intelligence platform. Transcribe, segment with Choi C99 depth scoring, extract MMR key takeaways, and search via 384-dim semantic embeddings.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="en"
-      data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <div className="gradient-bg" />
+    <html lang="en" data-scroll-behavior="smooth" className="h-full antialiased dark">
+      <body className="min-h-full flex flex-col bg-[#08090e] text-[#f0f2f8] selection:bg-indigo-500/30 selection:text-indigo-200">
+        <div className="gradient-bg pointer-events-none" />
         {children}
       </body>
     </html>

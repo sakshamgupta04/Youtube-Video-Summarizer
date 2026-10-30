@@ -102,41 +102,40 @@ ${chaptersText || "No chapters available."}
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-white">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]/50 backdrop-blur-md sticky top-0 z-20">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/80 backdrop-blur-md sticky top-0 z-20">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)] border border-[var(--border-subtle)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
             <svg
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[var(--accent)]"
             >
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
               <line x1="12" x2="12" y1="19" y2="22" />
             </svg>
           </div>
-          <span className="text-base font-semibold">
-            Echo<span className="text-[var(--accent)]">Notes</span>
+          <span className="text-base font-bold tracking-tight text-white">
+            Echo<span className="text-indigo-400">Notes</span> <span className="text-xs font-mono font-normal text-[var(--text-muted)]">Studio</span>
           </span>
         </Link>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs px-2.5 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] font-medium border border-[var(--accent)]/20">
-            Public View
+          <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 font-mono font-medium border border-cyan-500/20">
+            Public Studio View
           </span>
           <Link
             href="/login"
-            className="rounded-lg bg-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--accent-hover)] transition-all shadow-sm"
+            className="rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/20"
           >
-            Create Your Own
+            Launch Studio
           </Link>
         </div>
       </header>

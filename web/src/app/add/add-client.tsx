@@ -14,7 +14,6 @@ const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export function extractYouTubeVideoId(url: string): string | null {
   const trimmed = url.trim();
-  // Check if raw 11-char ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
     return trimmed;
   }
@@ -29,7 +28,7 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"upload" | "link">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "link">("link");
 
   // Upload tab state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -83,7 +82,6 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
     try {
       const sourceType = getSourceType(selectedFile.name);
 
-      // 1. Get signed upload URL via server-side admin client (bypasses storage RLS)
       const signRes = await fetch("/api/upload/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,7 +95,6 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
 
       const { storagePath, signedUrl } = await signRes.json();
 
-      // 2. Upload file directly to Supabase storage signed URL using standard PUT
       const uploadRes = await fetch(signedUrl, {
         method: "PUT",
         headers: {
@@ -181,41 +178,40 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
+    <div className="flex-1 flex flex-col min-h-screen bg-[var(--bg-primary)]">
+      {/* Top Header */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/80 backdrop-blur-md sticky top-0 z-20">
         <Link href="/library" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)] border border-[var(--border-subtle)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
             <svg
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[var(--accent)]"
             >
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
               <line x1="12" x2="12" y1="19" y2="22" />
             </svg>
           </div>
-          <span className="text-base font-semibold">
-            Echo<span className="text-[var(--accent)]">Notes</span>
+          <span className="text-base font-bold tracking-tight text-white">
+            Echo<span className="text-indigo-400">Notes</span> <span className="text-xs font-mono font-normal text-[var(--text-muted)]">Studio</span>
           </span>
         </Link>
 
         <div className="flex items-center gap-4">
-          <span className="text-xs text-[var(--text-muted)] hidden sm:inline">
+          <span className="text-xs font-mono text-[var(--text-muted)] hidden sm:inline">
             {userEmail}
           </span>
           <Link
             href="/library"
-            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-white transition-all"
           >
-            ← Library
+            &larr; Studio Library
           </Link>
         </div>
       </header>
@@ -224,65 +220,121 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="slide-up w-full max-w-xl">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight mb-2">Add New Content</h1>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Upload a file or paste a YouTube link to transcribe and summarize
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-medium text-indigo-400 mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 badge-pulse" />
+              Zero-Cloud API Processing
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">Process New Video</h1>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              Paste a YouTube link or upload audio/video to generate Choi C99 chapters, takeaways, and search embeddings
             </p>
           </div>
 
-          <div className="glass-card p-6 sm:p-8">
+          <div className="glass-card p-6 sm:p-8 rounded-2xl border border-[var(--border-subtle)] shadow-2xl">
             {/* Tabs */}
-            <div className="flex rounded-xl bg-[var(--bg-primary)] p-1 mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("upload");
-                  setErrorMessage(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
-                  activeTab === "upload"
-                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                Upload File
-              </button>
-
+            <div className="flex rounded-xl bg-[var(--bg-input)] p-1 mb-6 border border-white/5">
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab("link");
                   setErrorMessage(null);
                 }}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all ${
                   activeTab === "link"
-                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+                    : "text-[var(--text-muted)] hover:text-white"
                 }`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
                 YouTube Link
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("upload");
+                  setErrorMessage(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all ${
+                  activeTab === "upload"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+                    : "text-[var(--text-muted)] hover:text-white"
+                }`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Upload File (up to 50 MB)
+              </button>
             </div>
 
             {/* Error Message */}
             {errorMessage && (
-              <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-[var(--error)] fade-in">
+              <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-xs text-red-400 fade-in">
                 {errorMessage}
               </div>
             )}
 
+            {/* YouTube Link Tab Form */}
+            {activeTab === "link" && (
+              <form onSubmit={handleLinkSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="youtubeUrl" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                    YouTube URL
+                  </label>
+                  <input
+                    id="youtubeUrl"
+                    type="url"
+                    required
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none transition-all focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-mono">
+                    Supports regular videos, lectures, shorts, and timestamped links (up to 90 min)
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="linkTitle" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                    Custom Title (optional)
+                  </label>
+                  <input
+                    id="linkTitle"
+                    type="text"
+                    value={linkTitle}
+                    onChange={(e) => setLinkTitle(e.target.value)}
+                    placeholder="Auto-detected from video if left blank"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none transition-all focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingLink || !youtubeUrl.trim()}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {submittingLink ? (
+                    <>
+                      <span className="spinner" />
+                      Queuing YouTube Video...
+                    </>
+                  ) : (
+                    "Process Video into Notes & Chapters"
+                  )}
+                </button>
+              </form>
+            )}
+
             {/* Upload Tab Form */}
             {activeTab === "upload" && (
-              <form onSubmit={handleUploadSubmit} className="space-y-6">
+              <form onSubmit={handleUploadSubmit} className="space-y-5">
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -299,8 +351,8 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                     dragOver
-                      ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
-                      : "border-[var(--border-subtle)] hover:border-gray-600 bg-[var(--bg-input)]"
+                      ? "border-indigo-500 bg-indigo-500/10"
+                      : "border-[var(--border-subtle)] hover:border-indigo-500/40 bg-[var(--bg-input)]"
                   }`}
                 >
                   <input
@@ -315,7 +367,7 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                     }}
                   />
 
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       <polyline points="17 8 12 3 7 8" />
@@ -325,20 +377,20 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
 
                   {selectedFile ? (
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      <p className="text-sm font-semibold text-white">
                         {selectedFile.name}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)] mt-1">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB &middot; Click to change
+                      <p className="text-xs text-[var(--text-muted)] mt-1 font-mono">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB &middot; Click to replace
                       </p>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        Choose a file or drag & drop here
+                      <p className="text-sm font-medium text-white">
+                        Choose an audio/video file or drag & drop here
                       </p>
-                      <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                        Audio, Video, .txt, .md, .srt, .vtt &middot; Max 50 MB
+                      <p className="text-xs text-[var(--text-muted)] mt-1.5 font-mono">
+                        .mp3, .wav, .m4a, .mp4, .webm, .srt &middot; Max 50 MB
                       </p>
                     </div>
                   )}
@@ -354,14 +406,14 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                     value={uploadTitle}
                     onChange={(e) => setUploadTitle(e.target.value)}
                     placeholder="e.g. Stanford Lecture on Deep Learning"
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none transition-all focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={uploading || !selectedFile}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent-glow)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                 >
                   {uploading ? (
                     <>
@@ -370,58 +422,6 @@ export default function AddItemClient({ userId, userEmail }: AddClientProps) {
                     </>
                   ) : (
                     "Upload and Process"
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* YouTube Link Tab Form */}
-            {activeTab === "link" && (
-              <form onSubmit={handleLinkSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="youtubeUrl" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
-                    YouTube URL
-                  </label>
-                  <input
-                    id="youtubeUrl"
-                    type="url"
-                    required
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
-                  />
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
-                    Supports regular videos, shorts, and timestamped links (up to 90 min)
-                  </p>
-                </div>
-
-                <div>
-                  <label htmlFor="linkTitle" className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
-                    Custom Title (optional)
-                  </label>
-                  <input
-                    id="linkTitle"
-                    type="text"
-                    value={linkTitle}
-                    onChange={(e) => setLinkTitle(e.target.value)}
-                    placeholder="Auto-detected from video if left blank"
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-glow)]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submittingLink || !youtubeUrl.trim()}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent-glow)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                >
-                  {submittingLink ? (
-                    <>
-                      <span className="spinner" />
-                      Queuing YouTube Video...
-                    </>
-                  ) : (
-                    "Process YouTube Video"
                   )}
                 </button>
               </form>
